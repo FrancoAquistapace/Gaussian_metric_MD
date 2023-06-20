@@ -40,9 +40,9 @@ def gen_sc_lattice(n1, n2, n3, a):
         (n1*a*x_hat) x (n2*a*y_hat) x (n3*a*z_hat).
     '''
     config = []
-    for i in range(n1):
+    for k in range(n3):
         for j in range(n2):
-            for k in range(n3):
+            for i in range(n1):
                 # Build position and add to config
                 p = [a * i, 
                      a * j,
