@@ -19,6 +19,9 @@
 # Import modules
 import numpy as np
 
+
+# ------ Lattice generation functions ------------
+
 # Function that can generate a cubic structure
 def gen_sc_lattice(n1, n2, n3, a):
     '''
@@ -50,3 +53,54 @@ def gen_sc_lattice(n1, n2, n3, a):
                 config.append(p)
 
     return np.array(config)
+
+
+# ------ Lattice transformation functions --------
+
+# Define function to scale a lattice
+def scale(C, s):
+    '''
+    Params:
+        C : numpy array
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        s : iterable
+            Scaling factor to apply to the configuration C. Must 
+            be of shape (,3), so that each element is the scaling
+            factor for a given axis x, y or z, respectively.
+
+    Output:
+        Returns a new configuration C_new as a result of a scale
+        transformation of C:
+            C_new = C * Ixs
+        Where Ixs is a 3x3 matrix where is a diagonal matrix in 
+        which the i-th diagonal element equals the i-th element
+        from s.
+    '''
+    Ixs = np.array([[s[0], 0,    0],
+                    [0,    s[1], 0],
+                    [0,    0,    s[2]]])
+    return np.matmul(C, Ixs)
+
+# Define a function to displace a lattice
+def displace(C, X_0):
+    '''
+    Params:
+        C : numpy array
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        X_0 : numpy array
+            Array containing the x, y and z values of a 
+            position vector. This vector will be used to displace
+            the configuration.
+    
+    Output:
+        Returns a new configuraion C_new as a result of a 
+        displacement of C:
+            C_new = C + IxX_0
+        Where IxX_0 is a matrix of same shape as C in which
+        each row contains the vector X_0.
+    '''
+    return C + X_0
