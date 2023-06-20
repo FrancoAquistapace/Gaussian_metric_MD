@@ -58,7 +58,7 @@ def measure_representation(X, C, scale=1):
             element represents the x, y and z component of a 
             position vector, respectively. This array acts as
             the variable of the function.
-        C : list, tuple, numpy array or pandas DataFrame
+        C : numpy array
             Array containing atomic positions in 3 dimensions.
             In every case, C must be of shape (N, 3), where N 
             is the number of atoms in the configuration.
@@ -78,9 +78,12 @@ def measure_representation(X, C, scale=1):
         This is a multivariate Gaussian density function with 
         standard deviation std=(4 * pi)^(-1) and mean X_0. 
     '''
-    C_array = np.array(C)
     scale = 1 / np.sqrt(C.shape[0])
     sigma = 1 / (4 * np.pi)
+    X_0_list = [C[i,:] for i in range(C.shape[0])]
+    C_rep = scale * np.sum(
+        [multi_Gaussian(X, X_0, sigma) for X_0 in X_0_list])
+    return C_rep
 
 
 # ----- Element-wise representation functions -----
@@ -119,7 +122,7 @@ def measure_representation_exp(x, y, z, C, scale=1):
     Params:
         x, y, z : float or int
             x, y and z variables of the function, respectively.
-        C : list, tuple, numpy array or pandas DataFrame
+        C : numpy array
             Array containing atomic positions in 3 dimensions.
             In every case, C must be of shape (N, 3), where N 
             is the number of atoms in the configuration.
@@ -140,6 +143,10 @@ def measure_representation_exp(x, y, z, C, scale=1):
         This is a multivariate Gaussian density function with 
         standard deviation std=(4 * pi)^(-1) and mean X_0. 
     '''
-    C_array = np.array(C)
     scale = 1 / np.sqrt(C.shape[0])
     sigma = 1 / (4 * np.pi)
+    X_0_list = [C[i,:] for i in range(C.shape[0])]
+    X = np.array((x,y,z))
+    C_rep = scale * np.sum(
+        [multi_Gaussian(X, X_0, sigma) for X_0 in X_0_list])
+    return C_rep
