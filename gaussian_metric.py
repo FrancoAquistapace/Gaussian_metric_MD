@@ -158,8 +158,18 @@ def dot(C1, C2, step_size, margin_size):
     '''
     # Build domain using helper function
     dom = get_cubic_domain(C1, C2, step_size, margin_size)
-
-    return dom
+    # Define cubic samples volume in A^3
+    cube_vol = step_size ** 3
+    # Build multiplication of measure representations as 
+    # a lambda expression
+    C1_times_C2 = lambda X: measure_representation(X, C1) *\
+                            measure_representation(X, C2)
+    # Evaluate function applying to dom along 0th axis
+    all_results = np.apply_along_axis(C1_times_C2, 1, dom)
+    # Get result as the sum of all evaluations times the
+    # sample volume
+    result = np.sum(all_results) * cube_vol
+    return result
 
 
 # ----- Element-wise representation functions -----
