@@ -16,7 +16,6 @@
 
 # Import modules
 import numpy as np
-from scipy import integrate
 from tools import *
 
 
@@ -236,3 +235,43 @@ def measure_representation_exp(x, y, z, C, scale=1):
     C_rep = scale * np.sum(
         [multi_Gaussian(X, X_0, sigma) for X_0 in X_0_list])
     return C_rep
+
+
+def dot_exp(C1, C2, margin_size, tol):
+    '''
+    Params:
+        C1, C2 : numpy array
+            Numpy array containing atomic configurations
+            C1 and C2, respectively.
+        margin_size : int or float
+            Size in A of the margins added in each direction
+            to the cubic integration domain.
+        tol : float
+            Relative and absolute tolerance value to pass to 
+            the tplquad integrator.
+        
+    Output:
+        Returns the dot product between C1 and C2, defined
+        as:
+            < C1, C2 > = int_IR^3(C1(X) * C2(X) * dX)
+        Where the integral over IR^3 is approximated by a 
+        scipy integration of the space that contains both C1 
+        and C2. This space is extended in each dimension an 
+        amount 2 * margin_size. 
+    '''
+    from scipy import integrate
+    # Build joint configuration, to help get cubic domain
+    C_joint = np.concatenate([C1,C2])
+    # Determine max and min values of the cubic domain
+    x_max, y_max, z_max = np.max(C_joint, axis=0) + margin_size
+    x_min, y_min, z_min = np.min(C_joint, axis=0) - margin_size
+    # Build multiplication of measure representations as 
+    # a lambda expression
+    C1_times_C2 = lambda x,y,z: measure_representation_exp(x,y,z, C1) *\
+                                measure_representation_exp(x,y,z, C2)
+    # Integrate function with scipy's tplquad
+    result = integrate.tplquad(C1_times_C2, x_min, x_max, 
+                                            y_min, y_max, 
+                                            z_min, z_max,
+                                epsabs=tol, epsrel=tol)
+    return result[0]
