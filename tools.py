@@ -105,6 +105,7 @@ def displace(C, X_0):
     '''
     return C + X_0
 
+# Define a function to rotate a lattice
 def rotate(C, alpha, beta, gamma):
     '''
     Params:
@@ -141,4 +142,36 @@ def rotate(C, alpha, beta, gamma):
     R = np.matmul(R_z, np.matmul(R_y, R_x))
     # Calculate C_new
     C_new = np.transpose(np.matmul(R, C.transpose()))
+    return C_new
+
+
+# Define a function to flip a lattice
+def flip(C, x, y, z):
+    '''
+    Params:
+        C : numpy array
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        x, y, z : bool
+            Requested flip over each axis, respectively. True 
+            means that the flip will be done for its respective
+            axis.
+    Output:
+        Returns a new configuraion C_new as a result of a 
+        flip of C:
+            C_new = F x C
+        Where F is a matrix of shape (3,3), defined as:
+            F = [[+-1,  0,    0],
+                 [0,    +-1,  0],
+                 [0,    0,    +-1]]
+        with the + or - value of each diagonal element assigned
+        according to the bool value of the respective axis.
+    '''
+    # Define F
+    F = np.array([[-2*int(x)+1, 0, 0],
+              [0, -2*int(y)+1, 0],
+              [0, 0, -2*int(z)+1]])
+    # Get C_new
+    C_new = np.transpose(np.matmul(F, C.transpose()))
     return C_new
