@@ -231,9 +231,8 @@ def measure_representation_exp(x, y, z, C, scale=1):
     scale = 1 / np.sqrt(C.shape[0])
     sigma = 1 / (4 * np.pi)
     X_0_list = [C[i,:] for i in range(C.shape[0])]
-    X = np.array((x,y,z))
     C_rep = scale * np.sum(
-        [multi_Gaussian(X, X_0, sigma) for X_0 in X_0_list])
+        [multi_Gaussian_exp(x,y,z, X_0, sigma) for X_0 in X_0_list])
     return C_rep
 
 
