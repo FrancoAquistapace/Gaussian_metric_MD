@@ -171,6 +171,31 @@ def dot(C1, C2, step_size, margin_size):
     return result
 
 
+# Define function to calculate M metric 
+def M(C1, C2, step_size, margin_size):
+    '''
+    Params:
+        C1, C2 : numpy array
+            Numpy array containing atomic configurations
+            C1 and C2, respectively.
+        step_size : int or float
+            Size in A of the side of a cubic volume, which
+            is used to discretise the integration domain.
+        margin_size : int or float
+            Size in A of the margins added in each direction
+            to the cubic integration domain.
+        
+    Output:
+        Returns the M value between C1 and C2, defined
+        as:
+            M = 1 - min(< C1, C2 >, 1)
+        Where the dot product < C1, C2 > is calculated with the
+        vector implementation.
+    '''
+    dot_prod = dot(C1, C2, step_size, margin_size)
+    return 1 - np.min([dot_prod, 1])
+
+
 # ----- Element-wise representation functions -----
 
 def multi_Gaussian_exp(x, y, z, X_0, sigma):
@@ -274,3 +299,28 @@ def dot_exp(C1, C2, margin_size, tol):
                                             z_min, z_max,
                                 epsabs=tol, epsrel=tol)
     return result[0]
+
+
+# Define function to calculate M metric 
+def M_exp(C1, C2, margin_size, tol):
+    '''
+    Params:
+        C1, C2 : numpy array
+            Numpy array containing atomic configurations
+            C1 and C2, respectively.
+        margin_size : int or float
+            Size in A of the margins added in each direction
+            to the cubic integration domain.
+        tol : float
+            Relative and absolute tolerance value to pass to 
+            the tplquad integrator.
+        
+    Output:
+        Returns the M value between C1 and C2, defined
+        as:
+            M = 1 - min(< C1, C2 >, 1)
+        Where the dot product < C1, C2 > is calculated with the
+        element-wise implementation.
+    '''
+    dot_prod = dot_exp(C1, C2, margin_size, tol)
+    return 1 - np.min([dot_prod, 1])
