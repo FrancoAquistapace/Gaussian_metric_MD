@@ -104,3 +104,41 @@ def displace(C, X_0):
         each row contains the vector X_0.
     '''
     return C + X_0
+
+def rotate(C, alpha, beta, gamma):
+    '''
+    Params:
+        C : numpy array
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        alpha, beta, gamma : float
+            x, y and z axes rotation angles, respectively. 
+    
+    Output:
+        Returns a new configuraion C_new as a result of a 
+        rotation of C:
+            C_new = R x C
+        Where R is a matrix of shape (3,3) defined as:
+            R = R_z(gamma)*R_y(beta)*R_x(alpha)
+        with R_x, R_y and R_z being rotations about the
+        x, y and z axes, respectively.
+    '''
+    # Define each rotation
+    c_alpha, s_alpha = np.cos(alpha), np.sin(alpha)
+    R_x = np.array([[1, 0, 0],
+                    [0, c_alpha, -s_alpha],
+                    [0, s_alpha, c_alpha]])
+    c_beta, s_beta = np.cos(beta), np.sin(beta)
+    R_y = np.array([[c_beta, 0, s_beta],
+                    [0, 1, 0],
+                    [-s_beta, 0, c_beta]])
+    c_gamma, s_gamma = np.cos(gamma), np.sin(gamma)
+    R_z = np.array([[c_gamma, -s_gamma, 0],
+                    [s_gamma, c_gamma, 0],
+                    [0, 0, 1]])
+    # Build general rotation
+    R = np.matmul(R_z, np.matmul(R_y, R_x))
+    # Calculate C_new
+    C_new = np.transpose(np.matmul(R, C.transpose()))
+    return C_new
