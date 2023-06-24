@@ -16,6 +16,6 @@
 
 # Import modules
 import tensorflow as tf
-from tools import *
+from tools_tf import *
 
 # ----- General utility functions -----------------
