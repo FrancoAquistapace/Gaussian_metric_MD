@@ -13,3 +13,9 @@
 #   limitations under the License.
 
 # ----- Here we'll define the functions related to our metric, with TF --------
+
+# Import modules
+import tensorflow as tf
+from tools import *
+
+# ----- General utility functions -----------------
