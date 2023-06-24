@@ -126,20 +126,17 @@ def rotate(C, alpha, beta, gamma):
         x, y and z axes, respectively.
     '''
     # Define each rotation
-    alpha = tf.constant(alpha, dtype='float32')
-    c_alpha, s_alpha = tf.cos(alpha), tf.sin(alpha)
+    c_alpha, s_alpha = tf.cos(alpha).numpy(), tf.sin(alpha).numpy()
     R_x = tf.constant([[1., 0., 0.],
                        [0., c_alpha, -s_alpha],
                        [0., s_alpha, c_alpha]], 
                        dtype='float32')
-    beta = tf.constant(beta, dtype='float32')
-    c_beta, s_beta = tf.cos(beta), tf.sin(beta)
+    c_beta, s_beta = tf.cos(beta).numpy(), tf.sin(beta).numpy()
     R_y = tf.constant([[c_beta, 0., s_beta],
                        [0., 1., 0.],
                        [-s_beta, 0., c_beta]], 
                        dtype='float32')
-    gamma = tf.constant(gamma, dtype='float32')
-    c_gamma, s_gamma = tf.cos(gamma), tf.sin(gamma)
+    c_gamma, s_gamma = tf.cos(gamma).numpy(), tf.sin(gamma).numpy()
     R_z = tf.constant([[c_gamma, -s_gamma, 0.],
                        [s_gamma, c_gamma, 0.],
                        [0., 0., 1.]],
