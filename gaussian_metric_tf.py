@@ -65,12 +65,12 @@ def get_cubic_domain(C1, C2, step_size, margin_size):
 def multi_Gaussian(X, X_0, sigma):
     '''
     Params:
-        X : numpy array
+        X : tf.Tensor
             One-dimensional array of length 3, where each
             element represents the x, y and z component of a 
             position vector, respectively. This array acts as
             the variable of the function.
-        X_0 : numpy array
+        X_0 : tf.Tensor
             One-dimensional array of length 3, where each
             element represents the x, y and z component of a 
             position vector, respectively. This array acts as
@@ -88,3 +88,40 @@ def multi_Gaussian(X, X_0, sigma):
     A = tf.pow(tf.sqrt(2 * math.pi * sigma),-3)
     B = -1 * tf.pow(tf.norm(X-X_0),2) / (2 * sigma)
     return A * tf.exp(B)
+
+# Define measure representation of a configuration C from 
+# different sources
+def measure_representation(X, C, scale=1):
+    '''
+    Params:
+        X : tf.Tensor
+            One-dimensional array of length 3, where each
+            element represents the x, y and z component of a 
+            position vector, respectively. This array acts as
+            the variable of the function.
+        C : tf.Tensor
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        scale : float or int (optional)
+            Value used to transform each position vector X as:
+                X -> scale * X
+            Default value is 1.
+
+    Output:
+        Returns the value of the measure representation at the 
+        given point X. The measure representation C_r is built as:
+            C_r(X) = (1 / sqrt(|C|)) * sum_X_0(f(X,X_0))
+        Where |C| is the amount of atoms in C, sum_X_0 is a sum over 
+        all of the positions X_0 contained in C, and f(X,X_0) is 
+        defined as:
+            f(X, X_0) = multi_Gaussian(X, X_0, sigma=(4 * pi)^(-1))
+        This is a multivariate Gaussian density function with 
+        standard deviation std=(4 * pi)^(-1) and mean X_0. 
+    '''
+    scale = 1 / tf.sqrt(C.shape[0])
+    sigma = 1 / (4 * np.pi)
+    X_0_list = [C[i,:] for i in range(C.shape[0])]
+    C_rep = scale * tf.reduce_sum(
+        [multi_Gaussian(X, X_0, sigma).numpy() for X_0 in X_0_list])
+    return C_rep
