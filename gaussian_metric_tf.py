@@ -125,3 +125,46 @@ def measure_representation(X, C, scale=1):
     C_rep = scale * tf.reduce_sum(
         [multi_Gaussian(X, X_0, sigma).numpy() for X_0 in X_0_list])
     return C_rep
+
+
+# Define dot product between two measures
+def dot(C1, C2, step_size, margin_size):
+    '''
+    Params:
+        C1, C2 : tf.Tensor
+            Arrays containing atomic configurations
+            C1 and C2, respectively.
+        step_size : int or float
+            Size in A of the side of a cubic volume, which
+            is used to discretise the integration domain.
+        margin_size : int or float
+            Size in A of the margins added in each direction
+            to the cubic integration domain.
+        
+    Output:
+        Returns the dot product between C1 and C2, defined
+        as:
+            < C1, C2 > = int_IR^3(C1(X) * C2(X) * dX)
+        Where the integral over IR^3 is approximated by a 
+        sampling of the cubic space that contains both C1 
+        and C2, discretised as cubes of side step_size. This 
+        space is extended in each dimension an amount 
+        2 * margin_size. 
+        The cubic samples are used to evaluate the function
+        C1(X) * C2(X), and these evaluations are summed to 
+        approximate < C1, C2 >.
+    '''
+    # Build domain using helper function
+    dom = get_cubic_domain(C1, C2, step_size, margin_size)
+    # Define cubic samples volume in A^3
+    cube_vol = step_size ** 3
+    # Build multiplication of measure representations as 
+    # a lambda expression
+    C1_times_C2 = lambda X: measure_representation(X, C1) *\
+                            measure_representation(X, C2)
+    # Evaluate function applying to dom along 0th axis
+    all_results = tf.map_fn(C1_times_C2, dom)
+    # Get result as the sum of all evaluations times the
+    # sample volume
+    result = tf.reduce_sum(all_results) * cube_vol
+    return result
