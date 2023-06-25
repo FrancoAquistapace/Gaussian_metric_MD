@@ -42,17 +42,27 @@ def gen_sc_lattice(n1, n2, n3, a):
         vectors x_hat, y_hat, z_hat, and dimensions
         (n1*a*x_hat) x (n2*a*y_hat) x (n3*a*z_hat).
     '''
+    # Initialize empty line of points
     config = []
-    for k in range(n3):
-        for j in range(n2):
-            for i in range(n1):
-                # Build position and add to config
-                p = [a * i, 
-                     a * j,
-                     a * k]
-                config.append(p)
-
-    return np.array(config)
+    # Append points to line
+    for i in range(n1):
+        config.append([a * i, 0, 0])
+    config = np.array(config)
+    # Initialize first line of plane
+    new_conf = config.copy()
+    # Append lines to plane
+    for j in range(n2-1):
+        new_vec = np.array([0, a * (j+1), 0])
+        new_line = displace(config, new_vec)
+        new_conf = np.concatenate([new_conf, new_line], 0)
+    # Initialize first plane of space
+    final_conf = new_conf.copy()
+    # Append planes to space
+    for k in range(n3-1):
+        new_vec = np.array([0, 0, a * (k+1)])
+        new_plane = displace(new_conf, new_vec)
+        final_conf = np.concatenate([final_conf, new_plane], 0)
+    return final_conf
 
 
 # ------ Lattice transformation functions --------
