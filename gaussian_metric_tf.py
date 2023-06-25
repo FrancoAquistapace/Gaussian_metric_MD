@@ -16,6 +16,7 @@
 
 # Import modules
 import tensorflow as tf
+import math
 from tools_tf import *
 
 # ----- General utility functions -----------------
@@ -56,3 +57,34 @@ def get_cubic_domain(C1, C2, step_size, margin_size):
     dom = displace(dom, tf.constant([x_min, y_min, z_min]))
 
     return dom
+
+
+# ----- Vector representation functions -----------
+
+# Define multivariate Gaussian function
+def multi_Gaussian(X, X_0, sigma):
+    '''
+    Params:
+        X : numpy array
+            One-dimensional array of length 3, where each
+            element represents the x, y and z component of a 
+            position vector, respectively. This array acts as
+            the variable of the function.
+        X_0 : numpy array
+            One-dimensional array of length 3, where each
+            element represents the x, y and z component of a 
+            position vector, respectively. This array acts as
+            the mean if the Gaussian density function.
+        sigma : float or int
+            Value for the standard deviation of the Gaussian
+            density function.
+
+    Output:
+        Returns the value of f(X) at the given point X. The 
+        function f(X) is a multivariate Gaussian density, 
+        defined as:
+            f(X) = sqrt(2*pi*sigma)^(-3) * exp(-|X-X_0|^2/(2*sigma))
+    '''
+    A = tf.pow(tf.sqrt(2 * math.pi * sigma),-3)
+    B = -1 * tf.pow(tf.norm(X-X_0),2) / (2 * sigma)
+    return A * tf.exp(B)
