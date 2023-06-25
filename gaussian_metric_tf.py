@@ -119,7 +119,7 @@ def measure_representation(X, C, scale=1):
         This is a multivariate Gaussian density function with 
         standard deviation std=(4 * pi)^(-1) and mean X_0. 
     '''
-    scale = 1 / tf.sqrt(C.shape[0])
+    scale = 1 / tf.sqrt(float(C.shape[0]))
     sigma = 1 / (4 * np.pi)
     X_0_list = [C[i,:] for i in range(C.shape[0])]
     C_rep = scale * tf.reduce_sum(
