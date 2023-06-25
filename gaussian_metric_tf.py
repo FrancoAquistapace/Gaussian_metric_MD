@@ -120,7 +120,7 @@ def measure_representation(X, C, scale=1):
         standard deviation std=(4 * pi)^(-1) and mean X_0. 
     '''
     scale = 1 / tf.sqrt(float(C.shape[0]))
-    sigma = 1 / (4 * np.pi)
+    sigma = 1 / (4 * math.pi)
     X_0_list = [C[i,:] for i in range(C.shape[0])]
     C_rep = scale * tf.reduce_sum(
         [multi_Gaussian(X, X_0, sigma).numpy() for X_0 in X_0_list])
