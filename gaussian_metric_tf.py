@@ -164,3 +164,28 @@ def dot(C1, C2, step_size, margin_size):
     # Get result as the sum of all evaluations times the
     # sample volume
     return tf.reduce_sum(C1_times_C2) * cube_vol
+
+
+# Define function to calculate M metric 
+def M(C1, C2, step_size, margin_size):
+    '''
+    Params:
+        C1, C2 : tf.Tensor
+            Arrays containing atomic configurations
+            C1 and C2, respectively.
+        step_size : int or float
+            Size in A of the side of a cubic volume, which
+            is used to discretise the integration domain.
+        margin_size : int or float
+            Size in A of the margins added in each direction
+            to the cubic integration domain.
+        
+    Output:
+        Returns the M value between C1 and C2, defined
+        as:
+            M = 1 - min(< C1, C2 >, 1)
+        Where the dot product < C1, C2 > is calculated with the
+        vector implementation.
+    '''
+    dot_prod = dot(C1, C2, step_size, margin_size).numpy()
+    return 1 - tf.reduce_min([dot_prod, 1])
