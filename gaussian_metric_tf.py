@@ -86,7 +86,7 @@ def multi_Gaussian(X, X_0, sigma):
             f(X) = sqrt(2*pi*sigma)^(-3) * exp(-|X-X_0|^2/(2*sigma))
     '''
     A = tf.pow(tf.sqrt(2 * math.pi * sigma),-3)
-    B = -1 * tf.pow(tf.norm(X-X_0),2) / (2 * sigma)
+    B = -1 * tf.reduce_sum(tf.pow(X-X_0,2), -1) / (2 * sigma)
     return A * tf.exp(B)
 
 # Define measure representation of a configuration C from 
@@ -122,8 +122,8 @@ def measure_representation(X, C, scale=1):
     scale = 1 / tf.sqrt(float(C.shape[0]))
     sigma = 1 / (4 * math.pi)
     X_0_list = [C[i,:] for i in range(C.shape[0])]
-    C_rep = scale * tf.reduce_sum(
-        [multi_Gaussian(X, X_0, sigma).numpy() for X_0 in X_0_list])
+    multi_gs = [multi_Gaussian(X, X_0, sigma).numpy() for X_0 in X_0_list]
+    C_rep = scale * tf.reduce_sum(tf.constant(multi_gs, dtype='float32'), 0)
     return C_rep
 
 
@@ -160,11 +160,7 @@ def dot(C1, C2, step_size, margin_size):
     cube_vol = step_size ** 3
     # Build multiplication of measure representations as 
     # a lambda expression
-    C1_times_C2 = lambda X: measure_representation(X, C1) *\
-                            measure_representation(X, C2)
-    # Evaluate function applying to dom along 0th axis
-    all_results = tf.map_fn(C1_times_C2, dom)
+    C1_times_C2 = measure_representation(dom, C1)*measure_representation(dom, C2)
     # Get result as the sum of all evaluations times the
     # sample volume
-    result = tf.reduce_sum(all_results) * cube_vol
-    return result
+    return tf.reduce_sum(C1_times_C2) * cube_vol
