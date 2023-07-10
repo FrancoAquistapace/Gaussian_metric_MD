@@ -277,3 +277,23 @@ def frenkel_transformation(C, d_row, d, p):
         return C + N_F
     else:
         return C
+
+
+# Define a function that shuffles a given configuration
+def shuffle_transformation(C, seed=None):
+    '''
+    Params:
+        C : tf.Tensor
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        seed : int (optional)
+            Seed to use for the random generator of the shuffle.
+    Output:
+        Returns a new configuration C_new defined as:
+            C_new = tf.random.shuffle(C, seed=seed)
+        This function is simply a wrapper around the TensorFlow's
+        random.shuffle() function, to have a coherent notation of
+        each available transformation.
+    '''
+    return tf.random.shuffle(C, seed=None)
