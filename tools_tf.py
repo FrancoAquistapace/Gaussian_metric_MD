@@ -189,3 +189,27 @@ def flip(C, x, y, z):
     # Get C_new
     C_new = tf.transpose(tf.matmul(F, C, transpose_b=True))
     return C_new
+
+
+# Define a function to apply a general affine transformation
+def affine_transform(C, A, b):
+    '''
+    Params:
+        C : tf.Tensor
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        A : tf.Tensor
+            Array of shape (3,3) that describes a generalized
+            affine transformation except for displacements.
+        b : tf.Tensor
+            Array of shape (1,3) that describes an affine 
+            displacement.
+    Output:
+        Returns a new configuration C_new defined as:
+            C_new = (A * C^T)^T + b
+        Where T is the transpose of a matrix, and the sum
+        "+ b" is to be understood as adding the vector b
+        to each row of (A * C^T)^T.
+    '''
+    return tf.transpose(tf.matmul(A, C, transpose_b=True)) + b 
