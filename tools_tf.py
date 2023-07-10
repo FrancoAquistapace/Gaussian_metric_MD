@@ -237,3 +237,43 @@ def thermal_transformation(C, epsilon):
     # Generate thermal noise
     N_T = (tf.random.uniform(C.shape) * 2 * epsilon) - epsilon
     return C + N_T
+
+
+# Define a function that applies a Frenkel non-affine displacement
+def frenkel_transformation(C, d_row, d, p):
+    '''
+    Params:
+        C : tf.Tensor
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        d_row : int
+            Row index to apply the non-affine displacement, must
+            be between 0 and N-1.
+        d : float
+            Maximum magnitude of each element of the non-affine 
+            displacement vector.
+        p : float
+            Probability of applying the transformation. Must be 
+            between 0 and 1.
+    Output:
+        Returns a new configuration C_new defined as:
+            C_new = C + P * N_F
+        Where P=0 with probability 1 - p and P=1 with probability
+        p. The array N_F is of shape (N, 3) and has every row 
+        filled with 0s except for d_row. The elements of the row 
+        d_row are randomly selected from a uniform distribution
+        of the range [-d, d).
+    '''
+    # Check if operation will be performed or not
+    x = float(tf.random.uniform(()))
+    if x <= p:
+        # Build N_F
+        N = C.shape[0]
+        I = tf.constant([1 if i == d_row else 0 for i in range(N)], 
+                        dtype=tf.float32, shape=(1,N))
+        d_vec = (tf.random.uniform((1, 3)) * 2 * d) - d
+        N_F = tf.matmul(tf.transpose(I), d_vec)
+        return C + N_F
+    else:
+        return C
