@@ -192,7 +192,7 @@ def flip(C, x, y, z):
 
 
 # Define a function to apply a general affine transformation
-def affine_transform(C, A, b):
+def affine_transformation(C, A, b):
     '''
     Params:
         C : tf.Tensor
