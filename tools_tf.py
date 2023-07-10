@@ -213,3 +213,27 @@ def affine_transformation(C, A, b):
         to each row of (A * C^T)^T.
     '''
     return tf.transpose(tf.matmul(A, C, transpose_b=True)) + b 
+
+
+# Define a function that applies thermal non-affine displacements
+def thermal_transformation(C, epsilon):
+    '''
+    Params:
+        C : tf.Tensor
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        epsilon : float
+            Maximum magnitude of each element of the non-affine
+            transformation matrix.
+    Output:
+        Returns a new configuration C_new defined as:
+            C_new = C + N_T
+        Where N_T is a non-affine transformation of shape (N, 3)
+        that emulates the effect that temperature would have on 
+        the configuration C. The elements of N_T are sampled from
+        a uniform distribution of the range [-epsilon, epsilon).
+    '''
+    # Generate thermal noise
+    N_T = (tf.random.uniform(C.shape) * 2 * epsilon) - epsilon
+    return C + N_T
