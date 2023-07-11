@@ -69,3 +69,50 @@ def neighbors_from_file(path, N, deltas=True):
     if deltas:
         return neighbors[1]
     return neighbors[0]
+
+
+# Define a function to generate a random affine and non-affine
+# transformation
+def gen_transformation(C, A, b, epsilon, d_row, d, p, 
+                       seed=None):
+    '''
+    Params:
+        C : tf.Tensor
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        A : tf.Tensor
+            Array of shape (3,3) that describes a generalized
+            affine transformation except for displacements.
+        b : tf.Tensor
+            Array of shape (1,3) that describes an affine 
+            displacement.
+        epsilon : float
+            Maximum magnitude of each element of the non-affine
+            transformation matrix.
+        d_row : int
+            Row index to apply the non-affine displacement, must
+            be between 0 and N-1.
+        d : float
+            Maximum magnitude of each element of the non-affine 
+            displacement vector.
+        p : float
+            Probability of applying the transformation. Must be 
+            between 0 and 1.
+        seed : int (optional)
+            Seed to use for the random generator of the shuffle.
+    Output:
+        Returns a new configuration C_new defined as:
+            C_new = S[O_F[O_T[(A * C^T)^T + b]]]
+        Where ^T is the transposition operation, O_T is the thermal
+        transformation, O_F is the Frenkel transformation and S is 
+        a shuffling transformation.
+    '''
+    C_new = shuffle_transformation(
+            frenkel_transformation(
+            thermal_transformation(
+            affine_transformation(C, A, b), 
+            epsilon), 
+            d_row, d, p), 
+            seed=seed)
+    return C_new
