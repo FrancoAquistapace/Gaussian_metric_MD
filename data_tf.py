@@ -23,6 +23,7 @@ from tools_tf import *
 
 
 # ------ I/O functions --------
+
 # Define function to read files given a path
 def read_file(path):
     '''
@@ -36,3 +37,35 @@ def read_file(path):
         around ovito's io.import_file() function.
     '''
     return ovito.io.import_file(path)
+
+
+# ------ Data functions --------
+
+# Define a function that returns the neighbour list
+# for a given path
+def neighbors_from_file(path, N, deltas=True):
+    '''
+    Params:
+        path : str
+            Path of an ovito readable file containing
+            at least a set of atomic positions.
+        N : int
+            Number of neighbors to find for each atom.
+        deltas : bool (optional)
+            When True, returns an array of shape 
+            (M, N, 3) with the delta vectors of each 
+            atom's neighbors, where M is the amount of 
+            atoms in the system. If False, returns an 
+            array of shape (M, N) containing the indices
+            of the neighbors of each atom.
+    Output:
+        Returns an array containing information about the
+        N nearest neighbors of each atom in the given path.
+    '''
+    pipeline = read_file(path)
+    computed = pipeline.compute()
+    finder = ovito.data.NearestNeighborFinder(N, computed)
+    neighbors = finder.find_all()
+    if deltas:
+        return neighbors[1]
+    return neighbors[0]
