@@ -116,3 +116,26 @@ def gen_transformation(C, A, b, epsilon, d_row, d, p,
             d_row, d, p), 
             seed=seed)
     return C_new
+
+
+# Define function to generate dataset of affine transformation
+# matrices
+def gen_affine_A(num, min_val, max_val):
+    '''
+    Params:
+        num : int
+            Number of matrices to generate.
+        min_val : float
+            Minimu value for any element of the
+            matrices.
+        max_val : float
+            Maximum value for any element of the
+            matrices.
+    Output:
+        Returns a tensor of shape (num, 3, 3) with elements
+        sampled from a uniform distribution in the range
+        [min_val, max_val). This can be understood as an 
+        array of (3, 3) shaped affine transformation matrices.
+    '''
+    A_set = (tf.random.uniform((num, 3, 3)) * (max_val - min_val)) + min_val
+    return A_set
