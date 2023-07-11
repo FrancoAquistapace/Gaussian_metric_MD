@@ -139,3 +139,26 @@ def gen_affine_A(num, min_val, max_val):
     '''
     A_set = (tf.random.uniform((num, 3, 3)) * (max_val - min_val)) + min_val
     return A_set
+
+
+# Define function to generate dataset of affine displacement
+# vectors
+def gen_affine_b(num, min_val, max_val):
+    '''
+    Params:
+        num : int
+            Number of vectors to generate.
+        min_val : float
+            Minimum value for any element of the
+            vectors.
+        max_val : float
+            Maximum value for any element of the 
+            vectors.
+    Output:
+        Returns a tensor of shape (num, 1, 3) with elements 
+        sampled from a uniform distribution in the range
+        [min_val, max_val). This can be understood as an 
+        array of (1, 3) shaped affine displacement vectors.
+    '''
+    b_set = (tf.random.uniform((num, 1, 3)) * (max_val - min_val)) + min_val
+    return b_set
