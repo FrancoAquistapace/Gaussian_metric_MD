@@ -59,9 +59,12 @@ def write_config(C, path):
     # Get np array out of C tensor
     C_arr = C.numpy()
     # Define boundaries for the configuration
-    x_min, x_max = tf.reduce_min(C_arr[:,0]), tf.reduce_max(C_arr[:,0])
-    y_min, y_max = tf.reduce_min(C_arr[:,1]), tf.reduce_max(C_arr[:,1])
-    z_min, z_max = tf.reduce_min(C_arr[:,2]), tf.reduce_max(C_arr[:,2])
+    x_min = float(tf.reduce_min(C_arr[:,0]).numpy()) - 0.01
+    x_max = float(tf.reduce_max(C_arr[:,0]).numpy()) + 0.01
+    y_min = float(tf.reduce_min(C_arr[:,1]).numpy()) - 0.01
+    y_max = float(tf.reduce_max(C_arr[:,1]).numpy()) + 0.01
+    z_min = float(tf.reduce_min(C_arr[:,2]).numpy()) - 0.01
+    z_max = float(tf.reduce_max(C_arr[:,2]).numpy()) + 0.01
     # Design header
     header = 'ITEM: TIMESTEP\n0\nITEM: NUMBER OF ATOMS\n'
     header += str(C_arr.shape[0]) + '\n'
