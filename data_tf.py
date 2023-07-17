@@ -40,6 +40,53 @@ def read_file(path):
     return ovito.io.import_file(path)
 
 
+# Define function to write LAMMPS dump file from
+# a given configuration
+def write_config(C, path):
+    '''
+    Params:
+        C : tf.Tensor
+            Array containing atomic positions in 3 dimensions.
+            In every case, C must be of shape (N, 3), where N 
+            is the number of atoms in the configuration.
+        path : str
+            Path of the file in which to store the given 
+            configuration.
+    Output:
+        Saves the configuration C as a LAMMPS dump file at the
+        given path.
+    '''
+    # Get np array out of C tensor
+    C_arr = C.numpy()
+    # Define boundaries for the configuration
+    x_min, x_max = tf.reduce_min(C_arr[:,0]), tf.reduce_max(C_arr[:,0])
+    y_min, y_max = tf.reduce_min(C_arr[:,1]), tf.reduce_max(C_arr[:,1])
+    z_min, z_max = tf.reduce_min(C_arr[:,2]), tf.reduce_max(C_arr[:,2])
+    # Design header
+    header = 'ITEM: TIMESTEP\n0\nITEM: NUMBER OF ATOMS\n'
+    header += str(C_arr.shape[0]) + '\n'
+    header += 'ITEM: BOX BOUNDS pp pp pp\n'
+    header += str(x_min) + ' ' + str(x_max) + '\n'
+    header += str(y_min) + ' ' + str(y_max) + '\n'
+    header += str(z_min) + ' ' + str(z_max) + '\n'
+    header += 'ITEM: ATOMS id type x y z\n'
+    # Define body of the file
+    body = '' + header
+    idx = 1
+    atom_type = '1'
+    for i in range(C_arr.shape[0]):
+        body += str(idx) + ' ' + atom_type
+        for j in range(3):
+            body += ' ' + str(C_arr[i,j])
+        body += '\n'
+        idx += 1
+    # Open file in write mode
+    f = open(path, 'w')
+    f.write(body)
+    f.close()
+    return None
+
+
 # ------ Data functions --------
 
 # Define a function that returns the neighbour list
