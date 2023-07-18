@@ -208,8 +208,8 @@ def gen_affine_A(num, min_val, max_val, mode='normal'):
         m = num // 2
         if num % 2 == 1:
             m += 1
-        A_set_1 = (tf.random.uniform((n * 3 * 3),1) * (max_val - min_val)) + min_val
-        A_set_2 = (tf.random.uniform((m * 3 * 3),1) * (-min_val + max_val)) - max_val
+        A_set_1 = (tf.random.uniform((n * 3 * 3, 1)) * (max_val - min_val)) + min_val
+        A_set_2 = (tf.random.uniform((m * 3 * 3, 1)) * (-min_val + max_val)) - max_val
         A_set = tf.random.shuffle(tf.concat([A_set_1, A_set_2], 0), seed=None)
         A_set = tf.reshape(A_set, (num, 3, 3))
     else:
