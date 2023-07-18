@@ -171,7 +171,7 @@ def gen_transformation(C, A, b, epsilon, d_row, d, p,
 
 # Define function to generate dataset of affine transformation
 # matrices
-def gen_affine_A(num, min_val, max_val):
+def gen_affine_A(num, min_val, max_val, mode='normal'):
     '''
     Params:
         num : int
@@ -182,13 +182,39 @@ def gen_affine_A(num, min_val, max_val):
         max_val : float
             Maximum value for any element of the
             matrices.
+        mode : str (optional)
+            Either "normal" (default) or "double". If "normal",
+            then the elements of the matrices are sampled 
+            from a uniform distribution with range 
+            [min_val, max_val). If "double", then the elements
+            of the matrices are sampled in the same proportion
+            from two distributions, given respectively by the
+            following ranges:
+                [min_val, max_val)
+                (-max_val, -min_val]
     Output:
         Returns a tensor of shape (num, 3, 3) with elements
-        sampled from a uniform distribution in the range
-        [min_val, max_val). This can be understood as an 
-        array of (3, 3) shaped affine transformation matrices.
+        sampled from the selected distribution:
+        - normal -> [min_val, max_val) 
+        - double -> (-max_val, -min_val] ^ [min_val, max_val)
+        This can be understood as an array of (3, 3) shaped 
+        affine transformation matrices.
     '''
-    A_set = (tf.random.uniform((num, 3, 3)) * (max_val - min_val)) + min_val
+    if mode == 'normal':
+        A_set = (tf.random.uniform((num, 3, 3)) * (max_val - min_val)) + min_val
+    elif mode == 'double':
+        # Generate two distributions
+        n = num // 2
+        m = num // 2
+        if num % 2 == 1:
+            m += 1
+        A_set_1 = (tf.random.uniform((n * 3 * 3)) * (max_val - min_val)) + min_val
+        A_set_2 = (tf.random.uniform((m * 3 * 3)) * (-min_val + max_val)) - max_val
+        A_set = tf.random.shuffle(tf.concat([A_set_1, A_set_2], 0), seed=None)
+        A_set = tf.reshape(A_set, (num, 3, 3))
+    else:
+        print('Error: mode must be "normal" or "double".')
+        return None
     return A_set
 
 
