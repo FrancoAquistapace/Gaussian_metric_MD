@@ -279,7 +279,7 @@ def random_transformation(C, A, b, epsilon, d, p):
 # Define a function that can generate a dataset from a neighbor list
 def dataset_from_neighbors(neighbors, A_min, A_max, 
                             b_min, b_max, epsilon, d, p,
-                            seed=42):
+                            seed=42, A_mode='normal'):
     '''
     Params:
         neighbors : array
@@ -308,6 +308,9 @@ def dataset_from_neighbors(neighbors, A_min, A_max,
             Must be between 0 and 1.
         seed : int (optional)
             Seed to use for the random operations of the function.
+        A_mode : str (optional)
+            Sampling mode that is passed to gen_affine_A, default 
+            is "normal".
     Output:
         Returns a tf.data.Dataset object containing 2 zipped 
         datasets, input data and output data:
@@ -334,7 +337,8 @@ def dataset_from_neighbors(neighbors, A_min, A_max,
     C_data = tf.data.Dataset.from_tensor_slices(neighbors).map(
                             lambda x: tf.cast(x,tf.float32))
     # Generate A and b datasets
-    A_set = gen_affine_A(neighbors.shape[0], A_min, A_max)
+    A_set = gen_affine_A(neighbors.shape[0], A_min, A_max,
+                         mode=A_mode)
     b_set = gen_affine_b(neighbors.shape[0], b_min, b_max)
     A_data = tf.data.Dataset.from_tensor_slices(A_set)
     b_data = tf.data.Dataset.from_tensor_slices(b_set)
