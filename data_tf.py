@@ -276,6 +276,83 @@ def random_transformation(C, A, b, epsilon, d, p):
     return gen_transformation(C, A, b, epsilon, d_row, d, p)
 
 
+# Define function to output raw configuration databases
+def raw_dataset_from_neighbors(neighbors, A_min, A_max, 
+                            b_min, b_max, epsilon, d, p,
+                            seed=42, A_mode='normal'):
+    '''
+    Params:
+        neighbors : array
+            Array of shape (M, N, 3) containing the N nearest neighbors
+            delta vectors for each of M atoms.
+        A_min : float
+            Minimu value for any element of the
+            affine transformation matrices.
+        A_max : float
+            Maximum value for any element of the
+            affine transformation matrices.
+        b_min : float
+            Minimum value for any element of the
+            affine transformation vectors.
+        b_max : float
+            Maximum value for any element of the 
+            affine transformation vectors.
+        epsilon : float
+            Maximum magnitude of each element of the non-affine
+            temperature transformation matrix.
+        d : float
+            Maximum magnitude of each element of the non-affine 
+            Frenkel displacement vector.
+        p : float
+            Probability of applying the Frenkel transformation. 
+            Must be between 0 and 1.
+        seed : int (optional)
+            Seed to use for the random operations of the function.
+        A_mode : str (optional)
+            Sampling mode that is passed to gen_affine_A, default 
+            is "normal".
+    Output:
+        Returns four tf.data.Dataset objects containing the
+        following datasets:
+            1. Original neighbor configurations, shape (M, N, 3)
+            2. Transformed neighbor configurations, shape 
+            (M, N, 3)
+            3. Affine transformation matrices used, shape (M, 3, 3)
+            4. Affine transformation vectors used, shape (M, 1, 3)
+        This dataset can be used to train a model to predict the 
+        affine transformation matrix (A) and vector (b) need to go
+        from an original configuration C to a transformed 
+        configuration C'. The transformed configurations C' are 
+        generated for each original configuration C as:
+            C' = S[O_F[O_T[(A * C^T)^T + b]]]
+        Where ^T is the transposition operation, O_T is the thermal
+        transformation, O_F is the Frenkel transformation and S is 
+        a shuffling transformation.
+    '''
+    # Initialize random seed
+    tf.random.set_seed(seed)
+    # Get original configurations dataset
+    C_data = tf.data.Dataset.from_tensor_slices(neighbors).map(
+                            lambda x: tf.cast(x,tf.float32))
+    # Generate A and b datasets
+    A_set = gen_affine_A(neighbors.shape[0], A_min, A_max,
+                         mode=A_mode)
+    b_set = gen_affine_b(neighbors.shape[0], b_min, b_max)
+    A_data = tf.data.Dataset.from_tensor_slices(A_set)
+    b_data = tf.data.Dataset.from_tensor_slices(b_set)
+
+    # Define aux dataset
+    tri_data = tf.data.Dataset.zip((C_data, A_data, b_data))
+    # Define lambda expression that can generate a transformed
+    # configuration
+    f = lambda C, A, b : random_transformation(C, A, b,
+                                epsilon=epsilon, d=d, p=p)
+    # Get new data
+    C_new_data = tri_data.map(f)
+
+    # Return datasets
+    return C_data, C_new_data, A_data, b_data
+
 # Define a function that can generate a dataset from a neighbor list
 def dataset_from_neighbors(neighbors, A_min, A_max, 
                             b_min, b_max, epsilon, d, p,
@@ -331,26 +408,11 @@ def dataset_from_neighbors(neighbors, A_min, A_max,
         transformation, O_F is the Frenkel transformation and S is 
         a shuffling transformation.
     '''
-    # Initialize random seed
-    tf.random.set_seed(seed)
-    # Get original configurations dataset
-    C_data = tf.data.Dataset.from_tensor_slices(neighbors).map(
-                            lambda x: tf.cast(x,tf.float32))
-    # Generate A and b datasets
-    A_set = gen_affine_A(neighbors.shape[0], A_min, A_max,
-                         mode=A_mode)
-    b_set = gen_affine_b(neighbors.shape[0], b_min, b_max)
-    A_data = tf.data.Dataset.from_tensor_slices(A_set)
-    b_data = tf.data.Dataset.from_tensor_slices(b_set)
-
-    # Define aux dataset
-    tri_data = tf.data.Dataset.zip((C_data, A_data, b_data))
-    # Define lambda expression that can generate a transformed
-    # configuration
-    f = lambda C, A, b : random_transformation(C, A, b,
-                                epsilon=epsilon, d=d, p=p)
-    # Get new data
-    C_new_data = tri_data.map(f)
+    # Get raw datasets
+    C_data, C_new_data, A_data, b_data = raw_dataset_from_neighbors(
+                            neighbors, A_min, A_max, 
+                            b_min, b_max, epsilon, d, p,
+                            seed=seed, A_mode=A_mode)
 
     # Define input and output datasets
     input_data = tf.data.Dataset.zip((C_data, C_new_data))
