@@ -59,6 +59,53 @@ def get_cubic_domain(C1, C2, step_size, margin_size):
     return dom
 
 
+# Define function to generate a cubic domain that contains a 
+# batch of configurations C
+def get_cubic_domain_from_dataset(C, step_size, margin_size):
+    '''
+    Params:
+        C : tf.Tensor
+            Array containing batches of atomic configurations. 
+            The tensor is expected to have shape (M,N,3), 
+            with M being the number of configurations and N 
+            being the number of atoms per configuration.
+        step_size : int or float
+            Size in A of the side of a cubic volume, which
+            is used to discretise the cubic domain.
+        margin_size : int or float
+            Size in A of the margins added in each direction
+            to the cubic integration domain.
+        
+    Output:
+        Returns a cubic space that contains every configuration
+        in C, discretised as cubes of side step_size and 
+        represented by their center vector. This space is extended 
+        in each dimension an amount 2 * margin_size. This function 
+        is built to work with batches of data.
+    '''
+    # Build joint configuration, to help get cubic domain
+    C_joint = tf.concat([C1,C2], 0)
+    # Determine max and min values of the cubic domain
+    xyz_max = tf.reduce_max(tf.reduce_max(C_joint, axis=0), 
+                                        axis=0) + margin_size
+    xyz_min = tf.reduce_min(tf.reduce_min(C_joint, axis=0), 
+                                        axis=0) - margin_size
+    x_max, y_max, z_max = tf.split(xyz_max, num_or_size_splits=3)
+    x_min, y_min, z_min = tf.split(xyz_min, num_or_size_splits=3)
+
+    # Build domain as a set of points
+    n1, n2, n3 = tf.split((xyz_max - xyz_min)/step_size,
+                           num_or_size_splits=3)
+    n1 = int(n1) + 1
+    n2 = int(n2) + 1
+    n3 = int(n3) + 1
+    dom = graph_gen_sc_lattice(n1, n2, n3, step_size)
+    # Displace domain to its correct origin
+    dom = displace(dom, xyz_min)
+
+    return dom
+
+
 # ----- Vector representation functions -----------
 
 # Define multivariate Gaussian function
