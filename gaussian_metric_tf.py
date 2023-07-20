@@ -99,7 +99,7 @@ def get_cubic_domain_from_dataset(C, step_size, margin_size):
     n1 = int(n1) + 1
     n2 = int(n2) + 1
     n3 = int(n3) + 1
-    dom = graph_gen_sc_lattice(n1, n2, n3, step_size)
+    dom = gen_sc_lattice(n1, n2, n3, step_size)
     # Displace domain to its correct origin
     dom = displace(dom, xyz_min)
 
