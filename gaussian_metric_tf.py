@@ -83,12 +83,10 @@ def get_cubic_domain_from_dataset(C, step_size, margin_size):
         in each dimension an amount 2 * margin_size. This function 
         is built to work with batches of data.
     '''
-    # Build joint configuration, to help get cubic domain
-    C_joint = tf.concat([C1,C2], 0)
     # Determine max and min values of the cubic domain
-    xyz_max = tf.reduce_max(tf.reduce_max(C_joint, axis=0), 
+    xyz_max = tf.reduce_max(tf.reduce_max(C, axis=0), 
                                         axis=0) + margin_size
-    xyz_min = tf.reduce_min(tf.reduce_min(C_joint, axis=0), 
+    xyz_min = tf.reduce_min(tf.reduce_min(C, axis=0), 
                                         axis=0) - margin_size
     x_max, y_max, z_max = tf.split(xyz_max, num_or_size_splits=3)
     x_min, y_min, z_min = tf.split(xyz_min, num_or_size_splits=3)
