@@ -234,3 +234,72 @@ def M(C1, C2, step_size, margin_size):
     '''
     dot_prod = dot(C1, C2, step_size, margin_size).numpy()
     return 1 - tf.reduce_min([dot_prod, 1])
+
+
+
+# ----- Functions compatible with graph mode of TF -----------
+
+# Define function that calculates dot product in the measure
+# representation, that is compatible with TF graph mode.
+def graph_dot(C1, C2, dom, V):
+    '''
+    Params:
+        C1, C2 : tf.Tensor
+            Arrays containing batches of atomic configurations.
+            The tensors are expected to have shape (...,N,3),
+            with M being the number of configurations and N
+            being the number of atoms per configuration.
+        dom : tf.Tensor
+            Array of shape (N_prime, 3) containing positions
+            used as evaluation points for the operation.
+        V : float
+            Volume element to use when approximating the
+            integral operation.
+
+    Output:
+        Returns the dot product between C1 and C2, defined
+        as:
+            < C1, C2 > = int_IR^3(C1(X) * C2(X) * dX)
+        Where the integral over IR^3 is approximated by a
+        sampling of the cubic space that contains both C1
+        and C2, discretised as cubes represented by the
+        positions in dom.
+        The cubic samples are used to evaluate the function
+        C1(X) * C2(X), and these evaluations are summed and
+        multiplied by V to approximate < C1, C2 >. This
+        function can be used in the graph mode of TF.
+    '''
+    # Calculate lambdas
+    lambda_mb = tf.einsum('ki,...ni->...kn', dom, C1)
+    lambda_mk = tf.einsum('ki,...ni->...kn', dom, C2)
+
+    # Get phis
+    phi_m = tf.reduce_sum(tf.square(dom),axis=-1)
+    phi_b = tf.reduce_sum(tf.square(C1), axis=-1)
+    phi_k = tf.reduce_sum(tf.square(C2), axis=-1)
+
+    # Get thetas
+    broad_phi_m = tf.broadcast_to(tf.expand_dims(phi_m, -1), 
+                                  shape=tf.shape(lambda_mb)[-2:])
+    theta_mb = 2 * lambda_mb - broad_phi_m
+    broad_phi_m = tf.broadcast_to(tf.expand_dims(phi_m, -1), 
+                                  shape=tf.shape(lambda_mk)[-2:])
+    theta_mk = 2 * lambda_mk - broad_phi_m
+    # Add remaining phis to thetas
+    broad_phi = tf.broadcast_to(tf.expand_dims(phi_b, -2), 
+                                  shape=tf.shape(theta_mb))
+    theta_mb = broad_phi - 1 * theta_mb
+    broad_phi = tf.broadcast_to(tf.expand_dims(phi_k, -2), 
+                                  shape=tf.shape(theta_mk))
+    theta_mk = broad_phi - 1 * theta_mk
+    # Turn into exponential thetas and reduce_sum over b,k axes
+    theta_mb = tf.reduce_sum(tf.exp(-2 * math.pi * theta_mb), 
+                             axis=-1)
+    theta_mk = tf.reduce_sum(tf.exp(-2 * math.pi * theta_mk),
+                             axis=-1)
+    # Get final sum
+    prod_m = tf.einsum('...m,...m->...', theta_mk, theta_mb)
+    # Get final result
+    result = 8 * V * prod_m / tf.sqrt(float(
+                              tf.shape(C1)[-2]*tf.shape(C2)[-2]))
+    return result
