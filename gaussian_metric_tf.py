@@ -303,3 +303,36 @@ def graph_dot(C1, C2, dom, V):
     result = 8 * V * prod_m / tf.sqrt(float(
                               tf.shape(C1)[-2]*tf.shape(C2)[-2]))
     return result
+
+
+# Define function that calculates the M metric, that is 
+# compatible with TF graph mode
+def graph_M(C1, C2, dom, V):
+    '''
+    Params:
+        C1, C2 : tf.Tensor
+            Arrays containing batches of atomic configurations.
+            The tensors are expected to have shape (...,N,3),
+            with M being the number of configurations and N
+            being the number of atoms per configuration.
+        dom : tf.Tensor
+            Array of shape (N_prime, 3) containing positions
+            used as evaluation points for the operation.
+        V : float
+            Volume element to use when approximating the
+            integral operation.
+        
+    Output:
+        Returns the M value between C1 and C2, defined
+        as:
+            M = 1 - min(< C1, C2 >, 1)
+        Where the dot product < C1, C2 > is calculated with the
+        vector implementation.
+    '''
+    # Get dot product
+    dot_prod = graph_dot(C1, C2, dom, V)
+    # Get clipped values
+    clipped_dot = tf.clip_by_value(
+                    dot_prod, 0, 1)
+    # Return result
+    return -1 * clipped_dot + 1
