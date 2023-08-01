@@ -341,11 +341,11 @@ def graph_M(C1, C2, dom, V):
 # Define Keras loss function that calculates the M metric
 # given y_true and y_pred configurations
 class MLoss(tf.keras.losses.Loss):
-  def __init__(self, dom, V):
-    super(MLoss, self).__init__()
-    self.dom = dom
-    self.V = V
+    def __init__(self, dom, V):
+        super(MLoss, self).__init__()
+        self.dom = dom
+        self.V = V
 
-  def call(self, y_true, y_pred): # Defines the computation
-    loss = graph_M(y_true, y_pred, self.dom, self.V)
-    return loss
+    def call(self, y_true, y_pred): # Defines the computation
+        loss = graph_M(y_true, y_pred, self.dom, self.V)
+        return loss
