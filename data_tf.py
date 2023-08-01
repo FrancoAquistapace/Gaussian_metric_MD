@@ -40,6 +40,96 @@ def read_file(path):
     return ovito.io.import_file(path)
 
 
+# Define a function to generate a pandas DataFrame 
+# from a dump file
+def df_from_file(path):
+    '''
+    Params:
+        path : str
+            Path of the file to be opened.
+    Output:
+        Returns a tuple (df, header), where df is a
+        pandas DataFrame object containing all of the
+        data found in the file. Additionally, header
+        is a list of the header lines of the file, 
+        which can be used to write a new dump file
+        after analysing the data.
+    '''
+    # Import pandas
+    import pandas as pd
+    # Open file and scan for header
+    file = open(path,'r')
+    found_cols = False
+    header_lines = []
+    line_count = 0
+    while not found_cols:
+        line = file.readline()
+        line_count += 1
+        if 'ITEM: ATOMS' in line:
+            columns = line.split()
+            columns.pop(0) # Pop 'ITEM:'
+            columns.pop(0) # Pop 'ATOMS'
+            found_cols = True
+        header_lines.append(line)
+    file.close()
+    # Read csv data
+    df = pd.read_csv(path,sep=' ', 
+                     skiprows=line_count, names=columns)
+    return df, header_lines
+
+
+# Define a function to write LAMMPS dump file from 
+# a pandas DataFrame and a list of header lines
+def write_dump_from_df(df, header, path, new_cols=None):
+    '''
+    Params:
+        df : pandas DataFrame
+            DataFrame containing all of the atomic
+            data that is going to be written.
+        header : list
+            List of strings that are going to be
+            used as header lines of the dump file.
+            This header can usually be obtained when
+            reading a LAMMPS dump with the 
+            df_from_file function. The information in
+            header must correspond to that found in df,
+            i.e. correct boundaries and atom properties.
+        path : str
+            Path for the new file.
+        new_cols : list (optional)
+            List containing the names of the new columns
+            in df, which are not specified in header. If
+            not given, it is assumed that no new columns
+            have been added to df with respect to header.
+            The ordering of new_cols must correspond to
+            the ordering of the respective columns in df.
+    Output:
+        Writes a new file at path, containing the 
+        information provided by df, below the lines
+        stated in header. 
+    '''
+    new_file = open(path, 'w')
+    
+    # Write the header of the file
+    feat_line = ''
+    for col in new_cols:
+        feat_line += ' ' + col
+    feat_line += '\n'
+    for i in range(len(header)):
+        line = header[i]
+        if i == len(header) - 1:
+            line = line.replace('\n', feat_line)
+        new_file.write(line)
+    
+    # Now let's write the new data
+    final_string = df.to_csv(index=False, sep=' ', 
+                             float_format='%s', header=False)
+    new_file.write(final_string)
+    # Close the file and return
+    new_file.close()
+    return None
+
+
 # Define function to write LAMMPS dump file from
 # a given configuration
 def write_config(C, path):
