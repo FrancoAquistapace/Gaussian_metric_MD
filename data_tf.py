@@ -242,6 +242,25 @@ def ids_from_file(path):
     return ids
 
 
+# Define a function that outputs the neighbour configuration
+# of an atom, given its id
+def get_config_from_id(neighbors, id_list, atom_id):
+    '''
+    Params:
+        neighbors : array
+            Array of shape (M, N, 3) containing the N nearest neighbors
+            delta vectors for each of M atoms.
+        id_list : list
+            List containing the M atom ids corresponding to each 
+            configuration in neighbors.
+        atom_id : int
+    '''
+    # Get index of given id
+    index = id_list.index(atom_id)
+    # Generate config
+    C = tf.constant(neighbors[index], dtype='float32')
+    return C
+
 # Define a function to generate a random affine and non-affine
 # transformation
 def gen_transformation(C, A, b, epsilon, d_row, d, p, 
