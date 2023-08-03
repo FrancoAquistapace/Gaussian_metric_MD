@@ -241,7 +241,7 @@ def M(C1, C2, step_size, margin_size):
 
 # Define function that calculates dot product in the measure
 # representation, that is compatible with TF graph mode.
-def graph_dot(C1, C2, dom, V):
+def graph_dot(C1, C2, dom, V, equal_size=True):
     '''
     Params:
         C1, C2 : tf.Tensor
@@ -255,6 +255,10 @@ def graph_dot(C1, C2, dom, V):
         V : float
             Volume element to use when approximating the
             integral operation.
+        equal_size : bool (optional)
+            If True (default), it is assumed that C1 and C2 
+            have the same shapes and sizes. If False, this
+            is not assumed.
 
     Output:
         Returns the dot product between C1 and C2, defined
@@ -297,6 +301,10 @@ def graph_dot(C1, C2, dom, V):
                              axis=-1)
     theta_mk = tf.reduce_sum(tf.exp(-2 * math.pi * theta_mk),
                              axis=-1)
+    # Check equal_size condition
+    if not equal_size:
+        theta_mb = tf.squeeze(theta_mb, axis=-1)
+        theta_mk = tf.squeeze(theta_mk, axis=-1)
     # Get final sum
     prod_m = tf.einsum('...m,...m->...', theta_mk, theta_mb)
     # Get final result
