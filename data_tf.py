@@ -212,6 +212,36 @@ def neighbors_from_file(path, N, deltas=True):
     return neighbors[0]
 
 
+# Define a function to read a dump and output the ids as 
+# a list
+def ids_from_file(path):
+    '''
+    Params:
+        path : str
+            Path of the file.
+    Output:
+        Returns a list of each particle's identifier
+        ordered as they appear in the file.
+    '''
+    # Open file 
+    file = open(path, 'r')
+    # Initialize empty list
+    ids = []
+    # Skip lines until finding ids
+    found_cols = False
+    while not found_cols:
+        line = file.readline()
+        if 'ITEM: ATOMS' in line:
+            found_cols = True
+    # Star registering ids
+    for line in file.readlines():
+        ids.append(int(line.split()[0]))
+    # Close file
+    file.close()
+
+    return ids
+
+
 # Define a function to generate a random affine and non-affine
 # transformation
 def gen_transformation(C, A, b, epsilon, d_row, d, p, 
