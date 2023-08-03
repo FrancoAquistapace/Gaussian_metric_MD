@@ -297,9 +297,6 @@ def graph_dot(C1, C2, dom, V):
                              axis=-1)
     theta_mk = tf.reduce_sum(tf.exp(-2 * math.pi * theta_mk),
                              axis=-1)
-    # Squeeze 1-sized last dimension
-    theta_mb = tf.squeeze(theta_mb, axis=-1)
-    theta_mk = tf.squeeze(theta_mk, axis=-1)
     # Get final sum
     prod_m = tf.einsum('...m,...m->...', theta_mk, theta_mb)
     # Get final result
