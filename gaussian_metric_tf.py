@@ -241,7 +241,8 @@ def M(C1, C2, step_size, margin_size):
 
 # Define function that calculates dot product in the measure
 # representation, that is compatible with TF graph mode.
-def graph_dot(C1, C2, dom, V, equal_size=True):
+def graph_dot(C1, C2, dom, V, equal_size=True,
+              sigma=1 / (4 * math.pi)):
     '''
     Params:
         C1, C2 : tf.Tensor
@@ -259,6 +260,9 @@ def graph_dot(C1, C2, dom, V, equal_size=True):
             If True (default), it is assumed that C1 and C2 
             have the same shapes and sizes. If False, this
             is not assumed.
+        sigma : float (optional)
+            Sigma coefficient for the Gaussian functions. 
+            Default value is 1 / (4 * math.pi).
 
     Output:
         Returns the dot product between C1 and C2, defined
@@ -297,9 +301,9 @@ def graph_dot(C1, C2, dom, V, equal_size=True):
                                   shape=tf.shape(theta_mk))
     theta_mk = broad_phi - 1 * theta_mk
     # Turn into exponential thetas and reduce_sum over b,k axes
-    theta_mb = tf.reduce_sum(tf.exp(-2 * math.pi * theta_mb), 
+    theta_mb = tf.reduce_sum(tf.exp((-1 / (2 * sigma)) * theta_mb), 
                              axis=-1)
-    theta_mk = tf.reduce_sum(tf.exp(-2 * math.pi * theta_mk),
+    theta_mk = tf.reduce_sum(tf.exp((-1 / (2 * sigma)) * theta_mk),
                              axis=-1)
     # Check equal_size condition
     if not equal_size:
@@ -308,14 +312,16 @@ def graph_dot(C1, C2, dom, V, equal_size=True):
     # Get final sum
     prod_m = tf.einsum('...m,...m->...', theta_mk, theta_mb)
     # Get final result
-    result = 8 * V * prod_m / tf.sqrt(float(
+    A = tf.pow(2 * math.pi * sigma,-3)
+    result = A * V * prod_m / tf.sqrt(float(
                               tf.shape(C1)[-2]*tf.shape(C2)[-2]))
     return result
 
 
 # Define function that calculates the M metric, that is 
 # compatible with TF graph mode
-def graph_M(C1, C2, dom, V):
+def graph_M(C1, C2, dom, V, equal_size=True,
+            sigma=1 / (4 * math.pi)):
     '''
     Params:
         C1, C2 : tf.Tensor
@@ -329,16 +335,24 @@ def graph_M(C1, C2, dom, V):
         V : float
             Volume element to use when approximating the
             integral operation.
+        equal_size : bool (optional)
+            If True (default), it is assumed that C1 and C2 
+            have the same shapes and sizes. If False, this
+            is not assumed.
+        sigma : float (optional)
+            Sigma coefficient for the Gaussian functions. 
+            Default value is 1 / (4 * math.pi).
         
     Output:
         Returns the M value between C1 and C2, defined
         as:
             M = 1 - min(< C1, C2 >, 1)
         Where the dot product < C1, C2 > is calculated with the
-        vector implementation.
+        graph implementation.
     '''
     # Get dot product
-    dot_prod = graph_dot(C1, C2, dom, V)
+    dot_prod = graph_dot(C1, C2, dom, V, equal_size=equal_size, 
+                         sigma=sigma)
     # Get clipped values
     clipped_dot = tf.clip_by_value(
                     dot_prod, 0, 1)
@@ -349,11 +363,15 @@ def graph_M(C1, C2, dom, V):
 # Define Keras loss function that calculates the M metric
 # given y_true and y_pred configurations
 class MLoss(tf.keras.losses.Loss):
-    def __init__(self, dom, V):
+    def __init__(self, dom, V, equal_size=True, sigma=1 / (4 * math.pi)):
         super(MLoss, self).__init__()
         self.dom = dom
         self.V = V
+        self.equal_size = equal_size
+        self.sigma = sigma
 
     def call(self, y_true, y_pred): # Defines the computation
-        loss = graph_M(y_true, y_pred, self.dom, self.V)
+        loss = graph_M(y_true, y_pred, self.dom, self.V,
+                        equal_size=self.equal_size, 
+                        sigma=self.sigma)
         return loss
