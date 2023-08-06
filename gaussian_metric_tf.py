@@ -375,3 +375,18 @@ class MLoss(tf.keras.losses.Loss):
                         equal_size=self.equal_size, 
                         sigma=self.sigma)
         return loss
+
+
+# Define a Keras layer that computes the M metric
+class M_layer(tf.keras.layers.Layer):
+  def __init__(self, C, dom, V, sigma=1 / (4 * math.pi)):
+    super(M_layer, self).__init__()
+    self.dom = dom
+    self.V = V
+    self.C = C # Reference structure
+    self.sigma = sigma
+  # Defines the computation from inputs to outputs
+  def call(self, C1):
+    result = graph_M(C1, self.C, self.dom, self.V, 
+                     sigma=self.sigma)
+    return result
