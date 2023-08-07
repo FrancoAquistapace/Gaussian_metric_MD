@@ -248,12 +248,16 @@ def get_config_from_id(neighbors, id_list, atom_id):
     '''
     Params:
         neighbors : array
-            Array of shape (M, N, 3) containing the N nearest neighbors
-            delta vectors for each of M atoms.
+            Array of shape (M, N, 3) containing the N nearest
+            neighbors delta vectors for each of M atoms.
         id_list : list
-            List containing the M atom ids corresponding to each 
-            configuration in neighbors.
+            List containing the M atom ids corresponding to 
+            each configuration in neighbors.
         atom_id : int
+            Identifier number of the desired atom.
+    Output:
+        Returns a tf.Tensor that contains the neighbour
+        configuration of the selected atom.
     '''
     # Get index of given id
     index = id_list.index(atom_id)
