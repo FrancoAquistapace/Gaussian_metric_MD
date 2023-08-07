@@ -318,6 +318,96 @@ def graph_dot(C1, C2, dom, V, equal_size=True,
     return result
 
 
+# Define function that computes the exponential component of 
+# the dot product for a given batch of configurations C
+def graph_exp_component(C, dom, 
+                        sigma=1 / (4 * math.pi)):
+    '''
+    Params:
+        C : tf.Tensor
+            Array containing batches of atomic configurations.
+            The tensors are expected to have shape (...,N,3),
+            with a certain number of configurations and N
+            being the number of atoms per configuration.
+        dom : tf.Tensor
+            Array of shape (N_prime, 3) containing positions
+            used as evaluation points for the operation.
+        sigma : float (optional)
+            Sigma coefficient for the Gaussian functions. 
+            Default value is 1 / (4 * math.pi).
+    Output:
+        Returns a tensor of shape (..., m), with m being the
+        number of sampling points in dom. This tensor contains
+        the results of the exponential component of the 
+        measure representation dot product, for a batch of 
+        configurations. The first dimensions of the resulting 
+        tensor are given by the first dimensions of the C
+        tensor.
+    '''
+    # Calculate lambda
+    lambda_mb = tf.einsum('ki,...ni->...kn', dom, C)
+    # Get phis
+    phi_m = tf.reduce_sum(tf.square(dom),axis=-1)
+    phi_b = tf.reduce_sum(tf.square(C), axis=-1)
+    # Get theta
+    broad_phi_m = tf.broadcast_to(tf.expand_dims(phi_m, -1), 
+                                  shape=tf.shape(lambda_mb)[-2:])
+    theta_mb = 2 * lambda_mb - broad_phi_m
+    # Add remaining phi to theta
+    broad_phi = tf.broadcast_to(tf.expand_dims(phi_b, -2), 
+                                  shape=tf.shape(theta_mb))
+    theta_mb = broad_phi - 1 * theta_mb
+    # Turn into exponential theta and reduce_sum over b axis
+    theta_mb = tf.reduce_sum(tf.exp((-1 / (2 * sigma)) * theta_mb), 
+                             axis=-1)
+    return theta_mb
+
+
+# Define function that computes the dot product between C1
+# and C2, from their exponential theta_mb representations
+def graph_dot_from_thetas(C1, C2, theta_mb, theta_mk, V,
+                          sigma=1 / (4 * math.pi)):
+    '''
+    Params:
+        C1, C2 : tf.Tensor
+            Arrays containing batches of atomic configurations.
+            The tensors are expected to have shape (...,N,3),
+            with a certain number of configurations and N
+            being the number of atoms per configuration.
+        theta_mb, theta_mk : tf.Tensor
+            Tensors containing the exponential representations
+            of C1 and C2 respectively. They can be obtained 
+            through the graph_exp_component function.
+        V : float
+            Volume element to use when approximating the
+            integral operation.
+        sigma : float (optional)
+            Sigma coefficient for the Gaussian functions. 
+            Default value is 1 / (4 * math.pi).
+    Output:
+        Returns the dot product between C1 and C2, defined
+        as:
+            < C1, C2 > = int_IR^3(C1(X) * C2(X) * dX)
+        Where the integral over IR^3 is approximated by a
+        sampling of the cubic space that contains both C1
+        and C2, discretised as cubes represented by the
+        positions in dom.
+        The cubic samples are used to evaluate the function
+        C1(X) * C2(X), and these evaluations are summed and
+        multiplied by V to approximate < C1, C2 >. This
+        function can be used in the graph mode of TF. It 
+        returns the same output as graph_dot, but allows
+        for the exponential representations to be recycled. 
+    '''
+    # Get sum
+    prod_m = tf.einsum('...m,...m->...', theta_mk, theta_mb)
+    # Get final result
+    A = tf.pow(2 * math.pi * sigma,-3)
+    result = A * V * prod_m / tf.sqrt(float(
+                              tf.shape(C1)[-2]*tf.shape(C2)[-2]))
+    return result
+
+
 # Define function that calculates the M metric, that is 
 # compatible with TF graph mode
 def graph_M(C1, C2, dom, V, equal_size=True,
@@ -359,6 +449,8 @@ def graph_M(C1, C2, dom, V, equal_size=True,
     # Return result
     return -1 * clipped_dot + 1
 
+
+# ----- Keras Loss and Layer Sub-classes -----------
 
 # Define Keras loss function that calculates the M metric
 # given y_true and y_pred configurations
