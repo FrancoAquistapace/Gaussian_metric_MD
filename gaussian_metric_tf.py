@@ -778,9 +778,9 @@ def M_pipeline(input_files, config_file, N, config_N,
         # Clean df from any previous results
         for c in classes:
             if c in list(df.columns):
-                df.drop(columns=[c])
+                df.drop(columns=[c], inplace=True)
         if 'class' in list(df.columns):
-            df.drop(columns=['class'])
+            df.drop(columns=['class'], inplace=True)
         # Add predictions to df
         for i in range(len(classes)):
             df[classes[i]] = predictions[i]
