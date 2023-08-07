@@ -775,6 +775,12 @@ def M_pipeline(input_files, config_file, N, config_N,
         predictions = model.predict(neighbors, 
                                     verbose=predict_verbose)
 
+        # Clean df from any previous results
+        for c in classes:
+            if c in list(df.columns):
+                df.drop(columns=[c])
+        if 'class' in list(df.columns):
+            df.drop(columns=['class'])
         # Add predictions to df
         for i in range(len(classes)):
             df[classes[i]] = predictions[i]
