@@ -482,3 +482,51 @@ class M_layer(tf.keras.layers.Layer):
     result = graph_M(C1, self.C, self.dom, self.V, 
                      sigma=self.sigma)
     return result
+
+
+# Define a Keras layer that computes the graph_dot 
+class Dot_layer(tf.keras.layers.Layer):
+  def __init__(self, C, dom, V, sigma=1 / (4 * math.pi)):
+    super(Dot_layer, self).__init__()
+    self.dom = dom
+    self.V = V
+    self.C = C # Reference structure
+    self.sigma = sigma
+  # Defines the computation from inputs to outputs
+  def call(self, C1):
+    result = graph_dot(C1, self.C, self.dom, self.V, 
+                     sigma=self.sigma)
+    return result
+
+
+# Define a Keras layer that computes the exponential 
+# expression
+class Theta_layer(tf.keras.layers.Layer):
+    def __init__(self, dom, sigma=1 / (4 * math.pi)):
+        super(Theta_layer, self).__init__()
+        self.dom = dom
+        self.sigma = sigma
+    # Define computation from inputs to outputs
+    def call(self, C1):
+        result = graph_exp_component(C1, self. dom,
+                                    sigma=self.sigma)
+        return result
+
+
+# Define a keras layer that computes the 
+# graph_dot_from_thetas function
+class ThetasDot_layer(tf.keras.layers.Layer):
+    def __init__(self, C, dom, V, sigma=1 / (4 * math.pi)):
+    super(ThetasDot_layer, self).__init__()
+    self.dom = dom
+    self.V = V
+    self.C = C # Reference structure
+    self.theta_mk = graph_exp_component(C, dom, 
+                                        sigma=sigma)
+    self.sigma = sigma
+  # Defines the computation from inputs to outputs
+  def call(self, C1, theta_mb):
+    result = graph_dot_from_thetas(C1, self.C, 
+                          theta_mb, self.theta_mk, 
+                          self.V, sigma=self.sigma)
+    return result
