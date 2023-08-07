@@ -576,7 +576,7 @@ class ThetasDot_layer(tf.keras.layers.Layer):
 # from the exponential representations
 class ThetasM_layer(tf.keras.layers.Layer):
     def __init__(self, C, dom, V, sigma=1 / (4 * math.pi)):
-        super(ThetasDot_layer, self).__init__()
+        super(ThetasM_layer, self).__init__()
         self.dom = dom
         self.V = V
         self.C = C # Reference structure
