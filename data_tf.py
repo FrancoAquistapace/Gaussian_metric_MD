@@ -80,7 +80,8 @@ def df_from_file(path):
 
 # Define a function to write LAMMPS dump file from 
 # a pandas DataFrame and a list of header lines
-def write_dump_from_df(df, header, path, new_cols=None):
+def write_dump_from_df(df, header, path, new_cols=None,
+                        replace_cols=False):
     '''
     Params:
         df : pandas DataFrame
@@ -103,6 +104,9 @@ def write_dump_from_df(df, header, path, new_cols=None):
             have been added to df with respect to header.
             The ordering of new_cols must correspond to
             the ordering of the respective columns in df.
+        replace_cols : bool (optional)
+            Whether to replace header columns contained 
+            in new_cols or not. Default is False.
     Output:
         Writes a new file at path, containing the 
         information provided by df, below the lines
@@ -118,6 +122,15 @@ def write_dump_from_df(df, header, path, new_cols=None):
     for i in range(len(header)):
         line = header[i]
         if i == len(header) - 1:
+            if replace_cols:
+                split_line = line.split()
+                new_line = ''
+                for col in split_line:
+                    if not col in new_cols and col == '\n':
+                        new_line += col 
+                    elif not col in new_cols and col != '\n':
+                        new_line += col + ' '
+                line = new_line
             line = line.replace('\n', feat_line)
         new_file.write(line)
     
