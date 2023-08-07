@@ -776,11 +776,14 @@ def M_pipeline(input_files, config_file, N, config_N,
                                     verbose=predict_verbose)
 
         # Clean df from any previous results
+        need_replace = False
         for c in classes:
             if c in list(df.columns):
                 df.drop(columns=[c], inplace=True)
+                need_replace = True
         if 'class' in list(df.columns):
             df.drop(columns=['class'], inplace=True)
+            need_replace = True
         # Add predictions to df
         for i in range(len(classes)):
             df[classes[i]] = predictions[i]
@@ -791,7 +794,8 @@ def M_pipeline(input_files, config_file, N, config_N,
         if verbose == 2:
             print('Writing results')
         write_dump_from_df(df, header, path, 
-                            new_cols=[*classes,'class'])
+                            new_cols=[*classes,'class'],
+                            replace_cols=need_replace)
 
         # Add to counter
         k += 1
