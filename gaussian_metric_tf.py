@@ -589,3 +589,212 @@ class ThetasM_layer(tf.keras.layers.Layer):
                             theta_mb, self.theta_mk, 
                             self.V, sigma=self.sigma)
         return result
+
+
+
+# ----- Complete computation pipelines -----------
+
+# Define a pipeline that can compute the M metric
+# for multiple classes, and assign the best class
+# for each atom accordingly
+def M_pipeline(input_files, config_file, N, config_N, 
+                templates,
+                sigma=1 / (4 * math.pi),
+                step_size=0.3, margin_size=1, 
+                sample_size=30000, 
+                batch_size=512, prefetch=True,
+                verbose=1, save_templates=False):
+    '''
+    Params:
+        input_files : list 
+            List containing the path of the files to be 
+            analysed.
+        config_file : str
+            Path of the file from which the template 
+            configurations will be fetched.
+        N : int
+            Number of neighbors to use when analysing the 
+            files.
+        config_N : int
+            Number of neighbors to use when building the 
+            template configurations.
+        templates : dict
+            Dictionary containing the output classes as 
+            keys, with the element of each key being a 
+            list of atomic identifiers from which to 
+            build the template configurations of each 
+            class. For example, a classification between
+            surface and bulk would look something like 
+            this:
+                {"surface" : [1248, 94371],
+                 "bulk" : [4372, 23405, 4920]}
+            The word "class" is reserved and cannot be 
+            used in templates. Words that may conflict
+            with particle properties already present in the
+            files should not be used either.
+        sigma : float (optional)
+            Sigma coefficient for the Gaussian functions. 
+            Default value is 1 / (4 * math.pi).
+        step_size : float (optional)
+            Size in A of the side of a cubic volume, which
+            is used to discretise the cubic domain. Default
+            is 0.3.
+        margin_size : int or float (optional)
+            Size in A of the margins added in each direction
+            to the cubic integration domain. Default is 1.
+        sample_size : int (optional)
+            Amount of atomic configurations from each file
+            to use when defining the cubic domain. Default 
+            is 30000.
+        batch_size : int (optional)
+            Batch size to use when transforming the 
+            configurations into a Dataset. Default is 512.
+        prefetch : bool (optional)
+            Whether to use prefetch or not for each Dataset.
+            Default is True.
+        verbose : int (optional)
+            Option to print process information on screen. 
+            If 1, time elapsed is printed (default). If 2,
+            all relevant information of the process is 
+            printed. If 0, nothing is printed.
+        save_templates : bool (optional)
+            Whether to save dump files of the selected 
+            templates or not. Each template is saved as 
+            "temp_class_i.config", where "class" is replaced
+            with the class name, and "i" is replaced with the
+            template number of that class. Default is False.
+    Output:
+
+    '''
+    # Start timing if verbose is 1 or 2
+    if verbose in [1,2]:
+        import time
+        time_1 = time.time()
+
+    # Read the configuration file
+    if verbose == 2:
+        print('Gathering templates')
+    configs_n = neighbors_from_file(config_file, config_N, 
+                                    deltas=True)
+    
+    # Get configurations
+    config_ids = ids_from_file(config_file)
+    # Get classes
+    classes = [key for key in templates]
+
+    # Initialize dictionary with configurations
+    config_dict = {}
+    for c in classes:
+        # Get configurations for the class
+        configs = [get_config_from_id(configs_n, 
+                    config_ids, i) for i in templates[c]]
+        # If requested, save template configurations
+        if save_templates:
+            config_num = 1
+            for conf in configs:
+                config_name = 'temp_' + c + str(config_num) +\
+                              '.config'
+                write_config(conf, config_name)
+                config_num += 1
+
+        # Expand dims for each config
+        for i in range(len(configs)):
+            new_config = tf.expand_dims(configs[i], axis=0)
+            configs[i] = new_config
+
+        # Add configs to dictionary
+        config_dict[c] = configs
+
+    # Loop through all of the files
+    k = 1
+    d = len(input_files)
+    for path in input_files:
+        # Read df from file
+        if verbose == 2:
+            print('\nAnalysing file %d from %d.' % (k, d))
+        df, header = df_from_file(path)
+
+        # Gather neighbors
+        if verbose == 2:
+            print('Gathering neighbors')
+        neighbors = neighbors_from_file(path, N, deltas=True)
+
+        # Turn neighbors into dataset
+        neighbors = tf.constant(neighbors, dtype='float32')
+        neighbors = tf.data.Dataset.from_tensor_slices(neighbors)
+
+        # Build dom and define V
+        if verbose == 2:
+            print('Building integration domain')
+        V = step_size ** 3
+        dom = get_cubic_domain_from_dataset(
+                    next(iter(neighbors.batch(sample_size))),
+                    step_size=step_size,
+                    margin_size=margin_size)
+
+        # Batch dataset
+        neighbors = neighbors.batch(batch_size)
+        # Use prefetch if requested
+        if prefetch:
+            neighbors = neighbors.prefetch(tf.data.AUTOTUNE)
+
+        # Build the model that computes the M metric
+        if verbose == 2:
+            print('Building M model')
+        # 1. Setup input
+        input_C1 = tf.keras.layers.Input(shape=[N,3], dtype=tf.float32,
+                                        name='C1_input')
+        # 2. Add M layers
+        M_layers = {}
+        for c in classes:
+            M_layers[c] = [M_layer(
+                        C, dom, V
+                        )(input_C1) for C in config_dict[c]]
+        # 3. Add class layers
+        class_layers = [
+            tf.reduce_min(
+                tf.stack(M_layers{c}, 
+                         axis=0), 
+            axis=0) for c in classes]
+
+        # 4. Defining model
+        model = tf.keras.models.Model(inputs=[input_C1],
+                                      outputs=class_layers,
+                                      name='M_model')
+
+        # 5. Compile model
+        model.compile(loss='mse',
+                      optimizer=tf.keras.optimizers.Adam(),
+                      metrics=[])
+            
+        # Predict results
+        predict_verbose = 0
+        if verbose == 2:
+            print('Computing similarity metrics')
+            predict_verbose = 2
+        predictions = model.predict(neighbors, 
+                                    verbose=predict_verbose)
+
+        # Add predictions to df
+        for i in range(len(classes)):
+            df[classes[i]] = predictions[i]
+        # Add class predictions
+        df['class'] = tf.argmin(tf.constant(predictions), axis=0)
+
+        # Write new file
+        if verbose == 2:
+            print('Writing results')
+        write_dump_from_df(df, header, path, 
+                            new_cols=[*classes,'class'])
+
+        # Add to counter
+        k += 1
+
+    # If verbose is 1 or 2, finish timing and output total time
+    if verbose in [1,2]:
+        time_2 = time.time()
+        minutes_final = (time_2 - time_1)//60
+        seconds_final = (time_2 - time_1)%60
+        print('\nProcess completed')
+        print('Elapsed time: %d minutes and %.f seconds' % \
+            (minutes_final,seconds_final)) 
