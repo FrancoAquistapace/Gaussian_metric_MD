@@ -450,6 +450,46 @@ def graph_M(C1, C2, dom, V, equal_size=True,
     return -1 * clipped_dot + 1
 
 
+# Define function that calculates the M metric from
+# the exponential representations of the configurations
+def graph_M_from_thetas(C1, C2, theta_mb, theta_mk, V,
+                          sigma=1 / (4 * math.pi)):
+    '''
+    Params:
+        C1, C2 : tf.Tensor
+            Arrays containing batches of atomic configurations.
+            The tensors are expected to have shape (...,N,3),
+            with a certain number of configurations and N
+            being the number of atoms per configuration.
+        theta_mb, theta_mk : tf.Tensor
+            Tensors containing the exponential representations
+            of C1 and C2 respectively. They can be obtained 
+            through the graph_exp_component function.
+        V : float
+            Volume element to use when approximating the
+            integral operation.
+        sigma : float (optional)
+            Sigma coefficient for the Gaussian functions. 
+            Default value is 1 / (4 * math.pi).
+     Output:
+        Returns the M value between C1 and C2, defined
+        as:
+            M = 1 - min(< C1, C2 >, 1)
+        Where the dot product < C1, C2 > is calculated with the
+        graph implementation. This gives the same output as the
+        graph_M function, but allows for the exponential 
+        representations to be recycled.
+    '''
+    # Get dot product
+    dot_prod = graph_dot_from_thetas(C1, C2, theta_mb, theta_mk, V,
+                                     sigma=sigma)
+    # Get clipped values
+    clipped_dot = tf.clip_by_value(
+                    dot_prod, 0, 1)
+    # Return result
+    return -1 * clipped_dot + 1
+
+
 # ----- Keras Loss and Layer Sub-classes -----------
 
 # Define Keras loss function that calculates the M metric
@@ -527,6 +567,25 @@ class ThetasDot_layer(tf.keras.layers.Layer):
   # Defines the computation from inputs to outputs
   def call(self, C1, theta_mb):
     result = graph_dot_from_thetas(C1, self.C, 
+                          theta_mb, self.theta_mk, 
+                          self.V, sigma=self.sigma)
+    return result
+
+
+# Define a keras layer that computes the M metric 
+# from the exponential representations
+class ThetasM_layer(tf.keras.layers.Layer):
+    def __init__(self, C, dom, V, sigma=1 / (4 * math.pi)):
+    super(ThetasDot_layer, self).__init__()
+    self.dom = dom
+    self.V = V
+    self.C = C # Reference structure
+    self.theta_mk = graph_exp_component(C, dom, 
+                                        sigma=sigma)
+    self.sigma = sigma
+  # Defines the computation from inputs to outputs
+  def call(self, C1, theta_mb):
+    result = graph_M_from_thetas(C1, self.C, 
                           theta_mb, self.theta_mk, 
                           self.V, sigma=self.sigma)
     return result
