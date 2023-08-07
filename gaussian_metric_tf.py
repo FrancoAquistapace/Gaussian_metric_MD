@@ -753,8 +753,7 @@ def M_pipeline(input_files, config_file, N, config_N,
         # 3. Add class layers
         class_layers = [
             tf.reduce_min(
-                tf.stack(M_layers{c}, 
-                         axis=0), 
+                tf.stack(M_layers[c], axis=0), 
             axis=0) for c in classes]
 
         # 4. Defining model
