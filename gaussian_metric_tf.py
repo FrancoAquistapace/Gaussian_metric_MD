@@ -18,6 +18,7 @@
 import tensorflow as tf
 import math
 from tools_tf import *
+from data_tf import *
 
 # ----- General utility functions -----------------
 
