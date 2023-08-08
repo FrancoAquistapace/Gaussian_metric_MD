@@ -604,7 +604,8 @@ def M_pipeline(input_files, config_file, N, config_N,
                 step_size=0.3, margin_size=1, 
                 sample_size=30000, 
                 batch_size=512, prefetch=True,
-                verbose=1, save_templates=False):
+                verbose=1, save_templates=False,
+                output_prefix=None):
     '''
     Params:
         input_files : list 
@@ -664,8 +665,17 @@ def M_pipeline(input_files, config_file, N, config_N,
             "temp_class_i.config", where "class" is replaced
             with the class name, and "i" is replaced with the
             template number of that class. Default is False.
+        output_prefix : str (optional)
+            Prefix to use for the output paths. If None 
+            (default), then the outputs are saved to the 
+            original input file paths.
     Output:
-
+        Calculates and writes the M metric score between a set
+        of atomic configurations and a set of template 
+        structures, for each of the input files. Additionally, 
+        a property "class" is saved for each atom, that contains
+        the index of the class for which the M metric was the 
+        lowest (i.e. most similarity).
     '''
     # Start timing if verbose is 1 or 2
     if verbose in [1,2]:
@@ -789,6 +799,19 @@ def M_pipeline(input_files, config_file, N, config_N,
             df[classes[i]] = predictions[i]
         # Add class predictions
         df['class'] = tf.argmin(tf.constant(predictions), axis=0)
+
+        # Check if an output prefix was given
+        if not output_prefix == None and '/' in path:
+            # Split path by folder bars
+            split_path = path.split('/')
+            # Add prefix to final location
+            split_path[-1] = output_prefix + split_path[-1]
+            # Concatenate path
+            path = '/'.join(split_path)
+        elif not output_prefix == None and not '/' in path:
+            # If there are no folder bars 
+            # just add the prefix
+            path = output_prefix + path
 
         # Write new file
         if verbose == 2:
