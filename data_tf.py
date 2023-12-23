@@ -48,14 +48,24 @@ def read_file(path):
     '''
     Params:
         path : str
-            Path of an ovito readable file containing
-            at least a set of atomic positions.
+            Path of an ovito/atomman readable file 
+            containing at least a set of atomic 
+            positions.
     Output:
-        Returns an ovito Pipeline object built from 
-        the file located at path. This is a wrapper 
-        around ovito's io.import_file() function.
+        With ovito module (preferred): Returns an 
+        ovito Pipeline object built from the file 
+        located at path. This is a wrapper around 
+        ovito's io.import_file() function.
+
+        With atomman: Returns an atomman System
+        object built from the file located at path.
+        This is a wrapper around atommans's load()
+        function.
     '''
-    return ovito.io.import_file(path)
+    if ovito_import:
+        return ovito.io.import_file(path)
+    else:
+        return am.load('atom_dump',path)
 
 
 # Define a function to generate a pandas DataFrame 
