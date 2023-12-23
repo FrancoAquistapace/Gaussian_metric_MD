@@ -267,7 +267,7 @@ def neighbors_from_file(path, N, deltas=True):
                 break
             cutoff += 1
         # Get only neighbors up to N
-        neighbor_array = neighbors.nlist[:,1:neighbors.coord.min()+1]
+        neighbor_array = neighbors.nlist[:,1:N+1]
         if deltas:
             # Get tensor with all positions
             system = tf.constant(system.atoms.pos, dtype='float32')
