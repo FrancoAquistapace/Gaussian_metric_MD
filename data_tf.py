@@ -18,8 +18,30 @@
 
 # Import modules
 import tensorflow as tf
-import ovito
 import random
+import sys
+
+# We need some logic to check if either ovito or atomman are available
+modname_ovito = 'ovito'
+modname_am = 'atomman'
+
+if modname_ovito in sys.modules:
+    import ovito
+    ovito_import = True
+else:
+    ovito_import = False
+
+if modname_am in sys.modules:
+    import atomman as am 
+    am_import = True
+else:
+    am_import = False
+
+# Warn the user if both ovito and atomman are unavailable
+if not (am_import or ovito_import):
+    print('Warning: both ovito and atomman modules were not found.')
+    print('Running the data_tf module without ovito or atomman may cause errors.')
+
 from tools_tf import *
 
 
