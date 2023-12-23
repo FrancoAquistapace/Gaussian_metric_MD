@@ -244,13 +244,46 @@ def neighbors_from_file(path, N, deltas=True):
         Returns an array containing information about the
         N nearest neighbors of each atom in the given path.
     '''
-    pipeline = read_file(path)
-    computed = pipeline.compute()
-    finder = ovito.data.NearestNeighborFinder(N, computed)
-    neighbors = finder.find_all()
-    if deltas:
-        return neighbors[1]
-    return neighbors[0]
+    # Preferring ovito if available
+    if ovito_import:
+        pipeline = read_file(path)
+        computed = pipeline.compute()
+        finder = ovito.data.NearestNeighborFinder(N, computed)
+        neighbors = finder.find_all()
+        if deltas:
+            return neighbors[1]
+        return neighbors[0]
+
+    # Else, assuming atomman is available
+    else: 
+        system = read_file(path) 
+        cutoff = 1. # Initial cutoff guess
+        N_found = False
+        while not N_found:
+            neighbors = am.NeighborList(system=system, cutoff=cutoff)
+            # Check if min coordination is greater or equal to N
+            if neighbors.coord.min() >= N:
+                N_found = True
+                break
+            cutoff += 1
+        # Get only neighbors up to N
+        neighbor_array = neighbors.nlist[:,1:neighbors.coord.min()+1]
+        if deltas:
+            # Get tensor with all positions
+            system = tf.constant(system.atoms.pos, dtype='float32')
+            # Define tensor with neighbors
+            neighbor_array = tf.constant(neighbor_array, dtype='int32')
+            # Get neighbor positions
+            neighbor_vecs = tf.gather(system, neighbor_array)
+            # Get deltas
+            neigh_deltas = neighbor_vecs - tf.broadcast_to(
+                                                tf.expand_dims(system, 
+                                                            axis=1), 
+                                                neighbor_vecs.shape)
+
+            return neigh_deltas
+        else:
+            return neighbor_array
 
 
 # Define a function to read a dump and output the ids as 
