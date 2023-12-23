@@ -19,22 +19,18 @@
 # Import modules
 import tensorflow as tf
 import random
-import sys
 
 # We need some logic to check if either ovito or atomman are available
-modname_ovito = 'ovito'
-modname_am = 'atomman'
-
-if modname_ovito in sys.modules:
+try:
     import ovito
     ovito_import = True
-else:
+except:
     ovito_import = False
 
-if modname_am in sys.modules:
+try:
     import atomman as am 
     am_import = True
-else:
+except:
     am_import = False
 
 # Warn the user if both ovito and atomman are unavailable
