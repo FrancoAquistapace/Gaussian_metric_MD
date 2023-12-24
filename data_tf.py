@@ -23,18 +23,18 @@ import random
 # We need some logic to check if either ovito or atomman are available
 try:
     import ovito
-    ovito_import = True
+    OVITO_IMPORT = True
 except:
-    ovito_import = False
+    OVITO_IMPORT = False
 
 try:
     import atomman as am 
-    am_import = True
+    AM_IMPORT = True
 except:
-    am_import = False
+    AM_IMPORT = False
 
 # Warn the user if both ovito and atomman are unavailable
-if not (am_import or ovito_import):
+if not (AM_IMPORT or OVITO_IMPORT):
     print('Warning: both ovito and atomman modules were not found.')
     print('Running the data_tf module without ovito or atomman may cause errors.')
 
@@ -62,7 +62,7 @@ def read_file(path):
         This is a wrapper around atommans's load()
         function.
     '''
-    if ovito_import:
+    if OVITO_IMPORT:
         return ovito.io.import_file(path)
     else:
         return am.load('atom_dump',path)
@@ -245,7 +245,7 @@ def neighbors_from_file(path, N, deltas=True):
         N nearest neighbors of each atom in the given path.
     '''
     # Preferring ovito if available
-    if ovito_import:
+    if OVITO_IMPORT:
         pipeline = read_file(path)
         computed = pipeline.compute()
         finder = ovito.data.NearestNeighborFinder(N, computed)
