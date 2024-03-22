@@ -18,8 +18,26 @@
 
 # Import modules
 import tensorflow as tf
-import ovito
 import random
+
+# We need some logic to check if either ovito or atomman are available
+try:
+    import ovito
+    OVITO_IMPORT = True
+except:
+    OVITO_IMPORT = False
+
+try:
+    import atomman as am 
+    AM_IMPORT = True
+except:
+    AM_IMPORT = False
+
+# Warn the user if both ovito and atomman are unavailable
+if not (AM_IMPORT or OVITO_IMPORT):
+    print('Warning: both ovito and atomman modules were not found.')
+    print('Running the data_tf module without ovito or atomman may cause errors.')
+
 from tools_tf import *
 
 
@@ -30,14 +48,24 @@ def read_file(path):
     '''
     Params:
         path : str
-            Path of an ovito readable file containing
-            at least a set of atomic positions.
+            Path of an ovito/atomman readable file 
+            containing at least a set of atomic 
+            positions.
     Output:
-        Returns an ovito Pipeline object built from 
-        the file located at path. This is a wrapper 
-        around ovito's io.import_file() function.
+        With ovito module (preferred): Returns an 
+        ovito Pipeline object built from the file 
+        located at path. This is a wrapper around 
+        ovito's io.import_file() function.
+
+        With atomman: Returns an atomman System
+        object built from the file located at path.
+        This is a wrapper around atommans's load()
+        function.
     '''
-    return ovito.io.import_file(path)
+    if OVITO_IMPORT:
+        return ovito.io.import_file(path)
+    else:
+        return am.load('atom_dump',path)
 
 
 # Define a function to generate a pandas DataFrame 
@@ -215,14 +243,74 @@ def neighbors_from_file(path, N, deltas=True):
     Output:
         Returns an array containing information about the
         N nearest neighbors of each atom in the given path.
+        If deltas=False, the indices of the neighbors of 
+        each atom are returned (not recommended when running
+        with atomman). If deltas=True, an array of distance
+        vectors between each atom and its neighbors is 
+        returned. Availability of the ovito module is highly
+        recommended for this function, as it is more 
+        efficient than the atomman implementation (which 
+        additionally relies on pandas and scikit-learn).
     '''
-    pipeline = read_file(path)
-    computed = pipeline.compute()
-    finder = ovito.data.NearestNeighborFinder(N, computed)
-    neighbors = finder.find_all()
-    if deltas:
-        return neighbors[1]
-    return neighbors[0]
+    # Preferring ovito if available
+    if OVITO_IMPORT:
+        pipeline = read_file(path)
+        computed = pipeline.compute()
+        finder = ovito.data.NearestNeighborFinder(N, computed)
+        neighbors = finder.find_all()
+        if deltas:
+            return neighbors[1]
+        return neighbors[0]
+
+    # Else, assuming atomman is available
+    else: 
+        # Try importing NearestNeighbors algorithm, it is needed
+        # for this function to be computationally feasible
+        try:
+            from sklearn.neighbors import NearestNeighbors
+        except:
+            mssg = "sklearn.neighbors.NearestNeighbors not found"
+            raise Exception("Error: " + mssg)
+        # Read system from path
+        system = read_file(path) 
+        # Get array of original positions
+        og_pos = tf.constant(system.atoms.pos, dtype='float32')
+        # Define an array that will contain original indices
+        og_idx = tf.range(og_pos.shape[0], dtype='int32')
+        # Now we need to build a new system with the periodic 
+        # boundary conditions, and then use the NearestNeighbors
+        # model on it:
+        # 1. Get pbc conditions
+        og_pbc = system.pbc
+        # 2. Build supersize conditions based on pbc
+        scale_vals = [(-1,2) if c == True else (0,1) for c in og_pbc]
+        # 3. Build supersized system
+        super_sys_pos = tf.constant(
+            system.supersize(scale_vals[0], 
+                             scale_vals[1], 
+                             scale_vals[2]).atoms.pos,
+            dtype='float32')
+        # 4. Train NearestNeighbors on the super system
+        nn_model = NearestNeighbors(n_neighbors=N+1, n_jobs=-1)
+        nn_model.fit(super_sys_pos)
+        # 5. Get neighbors for original system and drop self 
+        # connections
+        ordered_pos = tf.constant(df_from_file(path)[0][['x','y','z']],
+                                  dtype='float32')
+        neigh_dist, neigh_idx = nn_model.kneighbors(ordered_pos)
+        neigh_idx = neigh_idx[:,1:]
+        if deltas:
+            # Get neighbor vectors
+            neigh_vecs = tf.gather(super_sys_pos, neigh_idx)
+            # Broadcast central atom position
+            expanded_og_pos = tf.broadcast_to(
+                            tf.expand_dims(ordered_pos, axis=1),
+                            neigh_vecs.shape)             
+            # Get delta vectors     
+            neigh_deltas = neigh_vecs - expanded_og_pos
+            return neigh_deltas
+        else:
+            return neigh_idx % og_pos.shape[0]
 
 
 # Define a function to read a dump and output the ids as 
