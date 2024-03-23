@@ -1083,3 +1083,192 @@ def Hamming_pipeline(input_files, config_file, N,
         print('\nProcess completed')
         print('Elapsed time: %d minutes and %.f seconds' % \
             (minutes_final,seconds_final)) 
+
+
+# Similar pipeline as the Hamming pipeline, but taking 
+# the template configurations directly instead of 
+# fetching them from a configuration file
+def Hamming_pipeline_from_configs(input_files, N, 
+                    templates, normalized=False,
+                    batch_size=512, prefetch=True,
+                    verbose=1, output_prefix=None):
+    '''
+    Params:
+        input_files : list 
+            List containing the path of the files to be 
+            analysed.
+        N : int
+            Number of neighbors to use when analysing the 
+            files and building the template configurations.
+        templates : dict
+            Dictionary containing the output classes as 
+            keys, with the element of each key being a 
+            list of template atomic configurations of 
+            each class. For example, a classification 
+            between B2 and BCC would look something like 
+            this:
+                {"B2" : [[1, 2, 2, 2, 2], 
+                         [2, 1, 1, 1, 1]],
+                 "BCC" : [[1, 1, 1, 1, 1], 
+                          [2, 2, 2, 2, 2]]}
+            The word "class" is reserved and cannot be 
+            used in templates. Words that may conflict
+            with particle properties already present in the
+            files should not be used either.
+        batch_size : int (optional)
+            Batch size to use when transforming the 
+            configurations into a Dataset. Default is 512.
+        prefetch : bool (optional)
+            Whether to use prefetch or not for each Dataset.
+            Default is True.
+        verbose : int (optional)
+            Option to print process information on screen. 
+            If 1, time elapsed is printed (default). If 2,
+            all relevant information of the process is 
+            printed. If 0, nothing is printed.
+        output_prefix : str (optional)
+            Prefix to use for the output paths. If None 
+            (default), then the outputs are saved to the 
+            original input file paths.
+    Output:
+        Calculates and writes the Hamming score between a set
+        of atomic configurations and a set of template 
+        structures, for each of the input files. Additionally, 
+        a property "class" is saved for each atom, that contains
+        the index of the class for which the Hamming distance was the 
+        lowest (i.e. most similarity).
+    '''
+    # Start timing if verbose is 1 or 2
+    if verbose in [1,2]:
+        import time
+        time_1 = time.time()
+
+    # Read the configuration file
+    if verbose == 2:
+        print('Gathering templates')
+        
+    # Get classes
+    classes = [key for key in templates]
+
+    # Initialize dictionary with configurations
+    config_dict = {}
+    for c in classes:
+        # Get configurations for the class
+        configs = [tf.constant(
+            i, dtype='int32'
+            ) for i in templates[c]]
+
+        # Expand dims for each config
+        for i in range(len(configs)):
+            new_config = tf.expand_dims(configs[i], axis=0)
+            configs[i] = new_config
+
+        # Add configs to dictionary
+        config_dict[c] = configs
+
+    # Loop through all of the files
+    k = 1
+    d = len(input_files)
+    for path in input_files:
+        # Read df from file
+        if verbose == 2:
+            print('\nAnalysing file %d from %d.' % (k, d))
+        df, header = df_from_file(path)
+
+        # Gather neighbors
+        if verbose == 2:
+            print('Gathering neighbors')
+        neighbors = neighbor_types_from_file(path, N)
+
+        # Turn neighbors into dataset
+        neighbors = tf.constant(neighbors, dtype='int32')
+        neighbors = tf.data.Dataset.from_tensor_slices(neighbors)
+
+        # Batch dataset
+        neighbors = neighbors.batch(batch_size)
+        # Use prefetch if requested
+        if prefetch:
+            neighbors = neighbors.prefetch(tf.data.AUTOTUNE)
+
+        # Build the model that computes the Hamming score
+        if verbose == 2:
+            print('Building Hamming score model')
+        # 1. Setup input
+        input_C1 = tf.keras.layers.Input(shape=[N], dtype=tf.int32,
+                                        name='C1_input')
+        # 2. Add Hamming layers
+        H_layers = {}
+        for c in classes:
+            H_layers[c] = [Hamming_layer(
+                        C, N, normalized=normalized
+                        )(input_C1) for C in config_dict[c]]
+        # 3. Add class layers
+        class_layers = [
+            tf.reduce_min(
+                tf.stack(H_layers[c], axis=0), 
+            axis=0) for c in classes]
+
+        # 4. Defining model
+        model = tf.keras.models.Model(inputs=[input_C1],
+                                      outputs=class_layers,
+                                      name='H_model')
+
+        # 5. Compile model
+        model.compile(loss='mse',
+                      optimizer=tf.keras.optimizers.Adam(),
+                      metrics=[])
+        
+        # Predict results
+        predict_verbose = 0
+        if verbose == 2:
+            print('Computing similarity metrics')
+            predict_verbose = 2
+        predictions = model.predict(neighbors, 
+                                    verbose=predict_verbose)
+        
+        # Clean df from any previous results
+        need_replace = False
+        for c in classes:
+            if c in list(df.columns):
+                df.drop(columns=[c], inplace=True)
+                need_replace = True
+        if 'H_class' in list(df.columns):
+            df.drop(columns=['H_class'], inplace=True)
+            need_replace = True
+        # Add predictions to df
+        for i in range(len(classes)):
+            df[classes[i]] = predictions[i]
+        # Add class predictions
+        df['H_class'] = tf.argmin(tf.constant(predictions), axis=0)
+
+        # Check if an output prefix was given
+        if not output_prefix == None and '/' in path:
+            # Split path by folder bars
+            split_path = path.split('/')
+            # Add prefix to final location
+            split_path[-1] = output_prefix + split_path[-1]
+            # Concatenate path
+            path = '/'.join(split_path)
+        elif not output_prefix == None and not '/' in path:
+            # If there are no folder bars 
+            # just add the prefix
+            path = output_prefix + path
+
+        # Write new file
+        if verbose == 2:
+            print('Writing results')
+        write_dump_from_df(df, header, path, 
+                            new_cols=[*classes,'H_class'],
+                            replace_cols=need_replace)
+
+        # Add to counter
+        k += 1
+
+    # If verbose is 1 or 2, finish timing and output total time
+    if verbose in [1,2]:
+        time_2 = time.time()
+        minutes_final = (time_2 - time_1)//60
+        seconds_final = (time_2 - time_1)%60
+        print('\nProcess completed')
+        print('Elapsed time: %d minutes and %.f seconds' % \
+            (minutes_final,seconds_final)) 
