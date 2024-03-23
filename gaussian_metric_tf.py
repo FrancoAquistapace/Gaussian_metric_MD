@@ -836,7 +836,7 @@ def M_pipeline(input_files, config_file, N, config_N,
 # ----- Additional functionallities --------------
 # Function to get Hamming distance between a set of
 # configurations and a reference
-def Hamming_compare(C, C1, N):
+def Hamming_compare(C, C1, N, normalized=False):
     '''
     Params:
         C : tf.Tensor
@@ -854,6 +854,9 @@ def Hamming_compare(C, C1, N):
             Normalization constant for the Hamming distance.
             Must be equal to the amount of atoms in C and in
             each configuration in C1.
+        normalized : bool (optional)
+            Whether to return normalized results or not, default
+            is False.
     
     Output:
         Returns the normalized Hamming distance between each 
@@ -868,29 +871,32 @@ def Hamming_compare(C, C1, N):
     bool_compare = (C1 - C != 0)
     # Turn into integer representation and count differences
     res = tf.reduce_sum(tf.cast(bool_compare, dtype=tf.int32), axis=-1)
-    # Normalize
-    res = res / N
+    # Normalize if requested
+    if normalized:
+        res = res / N
     return res
 
 # Keras layer that computes the normalized Hamming distance
 # between a predefined reference configuration and the 
 # input data
 class Hamming_layer(tf.keras.layers.Layer):
-    def __init__(self, C, N):
+    def __init__(self, C, N, normalized=False):
         super(Hamming_layer, self).__init__()
         self.C = C # Reference configuration
         self.N = N # Number of atoms in C
+        self.normalized = normalized
         
     # Defines the computation from inputs to outputs
     def call(self, C1):
-        result = Hamming_compare(self.C, C1, self.N)
+        result = Hamming_compare(self.C, C1, self.N, 
+                            normalized=self.normalized)
         return result
 
 
 # Complete pipeline that performs a Hamming distance
 # analysis for a set of configurations
 def Hamming_pipeline(input_files, config_file, N, 
-                    templates,
+                    templates, normalized=False,
                     batch_size=512, prefetch=True,
                     verbose=1, output_prefix=None):
     '''
@@ -1005,7 +1011,7 @@ def Hamming_pipeline(input_files, config_file, N,
         H_layers = {}
         for c in classes:
             H_layers[c] = [Hamming_layer(
-                        C, N
+                        C, N, normalized=normalized
                         )(input_C1) for C in config_dict[c]]
         # 3. Add class layers
         class_layers = [
