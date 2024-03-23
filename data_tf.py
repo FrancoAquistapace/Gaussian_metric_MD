@@ -320,22 +320,33 @@ def neighbor_types_from_file(path, N):
     Params:
         path : str
             Path of an ovito readable file containing
-            at least a set of atomic positions.
+            at least a set of particle types and atomic
+            positions.
         N : int
-            Number of neighbors to find for each atom.
+            Number of neighbors to find for each atom, 
+            including itself.
     Output:
-        
+        Returns an array containing the particle types of the
+        N nearest neighbors of each atom (including itself)
+        in the given path.
+        Availability of the ovito module is required
+        for this function.
     '''
     # Preferring ovito if available
     if OVITO_IMPORT:
         pipeline = read_file(path)
         computed = pipeline.compute()
-        finder = ovito.data.NearestNeighborFinder(N, computed)
+        finder = ovito.data.NearestNeighborFinder(N-1, computed)
         neighbors = finder.find_all()
+        # Get tensor with indexes
+        indexes_tensor = tf.reshape(tf.range(neighbors[0].shape[0]), 
+                                    (neighbors[0].shape[0], 1))
+        # Concat indexes with neighbors
+        particle_ids = tf.concat([indexes_tensor, neighbors[0]], axis=1)
         # Get particle types
         p_type_arr = tf.constant(list(computed.particles.particle_type))
         # Use neighbor indexes to gather particle types of neighbors
-        return tf.gather(p_type_arr,neighbors[0])
+        return tf.gather(p_type_arr,particle_ids)
     else:
         raise('Error: function unavailable without ovito import.')
 
