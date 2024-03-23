@@ -333,9 +333,9 @@ def neighbor_types_from_file(path, N):
         finder = ovito.data.NearestNeighborFinder(N, computed)
         neighbors = finder.find_all()
         # Get particle types
-        p_type_arr = np.array(list(computed.particles.particle_type))
+        p_type_arr = tf.constant(list(computed.particles.particle_type))
         # Use neighbor indexes to gather particle types of neighbors
-        return p_type_arr[neighbors[0]]
+        return tf.gather(p_type_arr,neighbors[0])
     else:
         raise('Error: function unavailable without ovito import.')
 

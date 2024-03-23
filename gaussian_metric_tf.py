@@ -865,7 +865,7 @@ def Hamming_compare(C, C1, N):
         configuration (length of the sequence), N.
     '''
     # Perform boolean comparison
-    bool_compare = (C1 - C == 0)
+    bool_compare = (C1 - C != 0)
     # Turn into integer representation and count differences
     res = tf.reduce_sum(tf.cast(bool_compare, dtype=tf.int32), axis=-1)
     # Normalize
