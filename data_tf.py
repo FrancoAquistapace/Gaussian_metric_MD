@@ -313,6 +313,33 @@ def neighbors_from_file(path, N, deltas=True):
             return neigh_idx % og_pos.shape[0]
 
 
+# Define a function that returns the partial neighbor
+# configurations, only considering a given particle type
+def neighbor_types_from_file(path, N):
+    '''
+    Params:
+        path : str
+            Path of an ovito readable file containing
+            at least a set of atomic positions.
+        N : int
+            Number of neighbors to find for each atom.
+    Output:
+        
+    '''
+    # Preferring ovito if available
+    if OVITO_IMPORT:
+        pipeline = read_file(path)
+        computed = pipeline.compute()
+        finder = ovito.data.NearestNeighborFinder(N, computed)
+        neighbors = finder.find_all()
+        # Get particle types
+        p_type_arr = np.array(list(computed.particles.particle_type))
+        # Use neighbor indexes to gather particle types of neighbors
+        return p_type_arr[neighbors[0]]
+    else:
+        raise('Error: function unavailable without ovito import.')
+
+
 # Define a function to read a dump and output the ids as 
 # a list
 def ids_from_file(path):
@@ -345,7 +372,8 @@ def ids_from_file(path):
 
 # Define a function that outputs the neighbour configuration
 # of an atom, given its id
-def get_config_from_id(neighbors, id_list, atom_id):
+def get_config_from_id(neighbors, id_list, atom_id, 
+                       dtype='float32'):
     '''
     Params:
         neighbors : array
@@ -356,6 +384,9 @@ def get_config_from_id(neighbors, id_list, atom_id):
             each configuration in neighbors.
         atom_id : int
             Identifier number of the desired atom.
+        dtype : str or tf.dtype
+            Data type for the resulting tensor, default is
+            float32.
     Output:
         Returns a tf.Tensor that contains the neighbour
         configuration of the selected atom.
@@ -363,7 +394,7 @@ def get_config_from_id(neighbors, id_list, atom_id):
     # Get index of given id
     index = id_list.index(atom_id)
     # Generate config
-    C = tf.constant(neighbors[index], dtype='float32')
+    C = tf.constant(neighbors[index], dtype=dtype)
     return C
 
 # Define a function to generate a random affine and non-affine
